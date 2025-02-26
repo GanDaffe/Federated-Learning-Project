@@ -1,7 +1,6 @@
+import flwr as fl
 import torch
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
-import flwr as fl
-
 from utils.data_processing import load_data, partition_data, clustering
 from utils.training_utils import compute_entropy
 from run_helper import run_simulation
@@ -14,16 +13,17 @@ if __name__ == '__main__':
 
     # ---------- HYPER PARAMETERS -------------
 
-
+    
+    NUM_ROUNDS = 800
     NUM_CLIENTS = 30
     NUM_IIDS = 6
     DIFF_DISTRIBUTION_NON_IID_CLIENTS = 12     # 2 * DIFF_DISTRIBUTION_NON_IID_CLIENTS + NUM_IIDS <= NUM_CLIENTS
     BATCH_SIZE = 100
     LOSS_FN   = 'multiclass' # multiclass / binary
     DATASET   = 'cifar10'    # emnist / fmnist / cifar10 / cifar100 / sentiment140 (take long time to load)
-    MODEL     = 'resnet50'     # resnet101 / resnet50 / vgg16 / mlp / cnn / lstm
+    MODEL     = 'cnn'     # resnet101 / resnet50 / vgg16 / mlp / cnn / lstm
     DISTANCE  = 'hellinger' # hellinger / jensenshannon / cosine ... 
-    FED = 'fedadp' # fedadp / scaffold / fedadpimp / fedprox / fedimp
+    FED = 'fedadpimp' # fedadp / scaffold / fedadpimp / fedprox / fedimp
 
 
     # ----------- LOADING THE DATA -------------
@@ -64,9 +64,11 @@ if __name__ == '__main__':
                     dataset=DATASET,
                     trainloader=trainloaders, 
                     valloader=valloaders,
-                    criterion=LOSS_FN, iids=NUM_IIDS,
+                    criterion=LOSS_FN, 
+                    iids=NUM_IIDS,
                     num_clients=NUM_CLIENTS,
-                    device=DEVICE
-                    # client_cluster_index=client_cluster_index,
-                    # entropies=entropies
+                    device=DEVICE,
+                    num_round=NUM_ROUNDS,
+                    client_cluster_index=client_cluster_index,
+                    entropies=entropies
                 )
