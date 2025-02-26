@@ -2,12 +2,13 @@ import flwr as fl
 import torch
 from torch import nn
 from copy import deepcopy
-from utils import get_parameters, set_parameters, train, test, train_scaffold
+from utils.training_utils import get_parameters, set_parameters, train, test, train_scaffold
 from collections import Counter, OrderedDict
+from flwr.client.numpy_client import NumPyClient  
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class FlowerClient(fl.client.NumPyClient):
+class FlowerClient(NumPyClient):
     def __init__(self, cid, net, criterion, trainloader, valloader):
         self.cid = cid
         self.net = net
@@ -21,7 +22,7 @@ class FlowerClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         set_parameters(self.net, parameters)
         loss, accuracy = train(self.net, self.trainloader, learning_rate=config["learning_rate"], loss_fn=self.criterion)
-        return get_parameters(self.net), len(self.trainloader.sampler), {"loss": loss, "accuracy": accuracy, "id": self.cid, "cluster_id": self.cluster_id}
+        return get_parameters(self.net), len(self.trainloader.sampler), {"loss": loss, "accuracy": accuracy, "id": self.cid}
 
     def evaluate(self, parameters, config):
         set_parameters(self.net, parameters)
@@ -30,64 +31,35 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 
-class FedAdmImpClient(fl.client.NumpyClient):
+class FedAdmImpClient(FlowerClient):
     def __init__(self, cid, cluster_id, net, criterion, trainloader, valloader):
-        self.cid = cid
+        # print(f"[DEBUG] Type of net: {type(net)}")
+        super().__init__(cid, net, criterion, trainloader, valloader)
         self.cluster_id = cluster_id
-        self.net = net
-        self.trainloader = trainloader
-        self.valloader = valloader
-        self.criterion = criterion
-
-    def get_parameters(self, config):
-        return get_parameters(self.net)
         
     def fit(self, parameters, config):
         set_parameters(self.net, parameters)
         loss, accuracy = train(self.net, self.trainloader, learning_rate=config["learning_rate"], loss_fn=self.criterion)
         return get_parameters(self.net), len(self.trainloader.sampler), {"loss": loss, "accuracy": accuracy, "id": self.cid, "cluster_id": self.cluster_id}
 
-    def evaluate(self, parameters, config):
-        set_parameters(self.net, parameters)
-        loss, accuracy = test(self.net, self.valloader, loss_fn=self.criterion)
-        return loss, len(self.valloader.sampler), {"accuracy": accuracy}
-    
 
-class FedProxClient(fl.client.NumPyClient):
+class FedProxClient(FlowerClient):
     def __init__(self, cid, net, criterion, trainloader, valloader):
-        self.cid = cid
-        self.net = net
-        self.trainloader = trainloader
-        self.valloader = valloader
-        self.criterion = criterion
-
-    def get_parameters(self, config):
-        return get_parameters(self.net)
+        super().__init__(cid, net, criterion, trainloader, valloader)
     
     def fit(self, parameters, config):
         set_parameters(self.net, parameters)
         loss, accuracy = train(self.net, self.trainloader, learning_rate=config["learning_rate"], proximal_mu=config["proximal_mu"])
         return get_parameters(self.net), len(self.trainloader.sampler), {"loss": loss, "accuracy": accuracy, "id": self.cid, "cluster_id": self.cluster_id}
 
-    def evaluate(self, parameters, config):
-        set_parameters(self.net, parameters)
-        loss, accuracy = test(self.net, self.valloader, loss_fn=self.criterion)
-        return loss, len(self.valloader.sampler), {"accuracy": accuracy}
 
-
-class ScaffoldClient(fl.client.NumPyClient):
+class ScaffoldClient(FlowerClient):
 
     def __init__(self, cid, net, trainloader, valloader, criterion):
-        self.cid = cid
-        self.net = net
-        self.trainloader = trainloader
-        self.valloader = valloader
-        self.criterion = criterion
+        super().__init__(cid, net, criterion, trainloader, valloader)
+
         params = get_parameters(self.net)
         self.weight_shapes = list(map(lambda arr: arr.shape, params)) # used for checking weights and covariates
-
-    def get_parameters(self, config):
-        return get_parameters(self.net)
 
     def fit(self, parameters, config):
 
@@ -105,12 +77,7 @@ class ScaffoldClient(fl.client.NumPyClient):
         self.check_shapes(weight_and_covariates, self.weight_shapes)
 
         return weight_and_covariates, len(self.trainloader.dataset), {"loss": loss, "accuracy": accuracy, "id": self.cid}
-
-    def evaluate(self, parameters, config):
-        set_parameters(self.net, parameters)
-        loss, accuracy = test(self.net, self.valloader, loss_fn=self.criterion)
-        return loss, len(self.valloader.dataset), {"accuracy": accuracy}
-
+    
     def _train(
         self,
         net,
@@ -148,7 +115,6 @@ class ScaffoldClient(fl.client.NumPyClient):
 
         return train_loss, train_acc, new_client_covariates
     
-
     def check_shapes(self, weights_and_covariates, weight_shapes) -> None:
         """Given a list of numpy arrays checks whether they have a repeating pattern of given shapes"""
         assert len(weights_and_covariates) % len(weight_shapes) == 0
