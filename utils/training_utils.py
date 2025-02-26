@@ -14,9 +14,7 @@ from torch.optim import SGD
 from scipy.spatial.distance import cosine
 from sklearn.cluster import OPTICS
 from models import fMLP, fCNN, eMLP, eCNN, CNN2, CNN4, LSTM, CustomCNN, ResNet101, ResNet50, VGG16
-from flwr.common import NDArrays, Tupple
 from tqdm import tqdm 
-
 
 seed_value = 42
 random.seed(seed_value)
@@ -86,11 +84,8 @@ def get_model(model_name, dataset_name, num_conv_block=4):
 
 def train(net, trainloader, learning_rate: float, loss_fn, proximal_mu: float = None):
 
-    if loss_fn == 'multiclass':
-        criterion = nn.CrossEntropyLoss()
-    elif loss_fn == 'binary':
-        criterion = nn.BCELoss()
-
+ 
+    criterion = nn.CrossEntropyLoss() if loss_fn == 'multiclass' else nn.BCELoss()
     optimizer = SGD(net.parameters(), lr=learning_rate)
     net.train()
     running_loss, running_corrects = 0.0, 0
@@ -193,7 +188,7 @@ def train_scaffold(
     loss_fn: str,
     server_covariates: list,
     client_covariates: list,
-) -> tuple[float, float]:
+):
     criterion = nn.CrossEntropyLoss() if loss_fn == 'multiclass' else nn.BCELoss()
     device = next(net.parameters()).device
 
