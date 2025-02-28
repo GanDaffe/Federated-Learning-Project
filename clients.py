@@ -2,7 +2,7 @@ import flwr as fl
 import torch
 from torch import nn
 from copy import deepcopy
-from utils.training_utils import get_parameters, set_parameters, train, test, train_scaffold
+from utils.training_utils import get_parameters, set_parameters, train, test, train_scaffold, load_c_local, set_c_local
 from collections import Counter, OrderedDict
 from flwr.client.numpy_client import NumPyClient  
 
