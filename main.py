@@ -23,7 +23,7 @@ if __name__ == '__main__':
     DATASET   = 'cifar10'    # emnist / fmnist / cifar10 / cifar100 / sentiment140 (take long time to load)
     MODEL     = 'cnn'     # resnet101 / resnet50 / vgg16 / mlp / cnn / lstm
     DISTANCE  = 'hellinger' # hellinger / jensenshannon / cosine ... 
-    FED = 'fedadpimp' # fedadp / scaffold / fedadpimp / fedprox / fedimp
+    FED = 'fedadpimp' # fedadp / scaffold / fedadpimp / fedprox / fedimp / fedavg / fednova
 
 
     # ----------- LOADING THE DATA -------------
