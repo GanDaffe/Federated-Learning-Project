@@ -55,6 +55,7 @@ if __name__ == '__main__':
         trainloaders.append(DataLoader(trainset, batch_size=BATCH_SIZE, sampler=SubsetRandomSampler(ids[i])))
         valloaders.append(DataLoader(valsets[i], batch_size=BATCH_SIZE))
 
+    client_dataset_ratio: float = int((len(trainset) / NUM_CLIENTS)) / len(trainset)
 
     # ------------ RUN SIMULATION ---------------
 
@@ -69,6 +70,7 @@ if __name__ == '__main__':
                     num_clients=NUM_CLIENTS,
                     device=DEVICE,
                     num_round=NUM_ROUNDS,
+                    client_dataset_ratio=client_dataset_ratio,
                     client_cluster_index=client_cluster_index,
                     entropies=entropies
                 )
