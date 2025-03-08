@@ -8,7 +8,7 @@ import gc
 import torch
 import torch.nn as nn
 from torch.optim import SGD
-from models import CNN, LSTM, CustomCNN, ResNet, ResidualBlock, VGG16
+from models import CNN, LSTM, ResNet, ResidualBlock, VGG16
 from tqdm import tqdm 
 
 seed_value = 42
@@ -35,7 +35,8 @@ def get_model(model_name, dataset_name, model_config):
     elif dataset_name == 'emnist':
         if model_name == 'cnn':
             return CNN(num_layer=model_config['num_layer'], 
-                       im_size=model_config['in_shape'],
+                       in_shape=model_config['in_shape'],
+                       im_size=model_config['im_size'],
                        hidden=model_config['hidden'], 
                        out_shape=model_config['out_shape'])
         else:
@@ -44,7 +45,8 @@ def get_model(model_name, dataset_name, model_config):
     elif dataset_name == 'fmnist':
         if model_name == 'cnn':
             return CNN(num_layer=model_config['num_layer'], 
-                       im_size=model_config['in_shape'],
+                       in_shape=model_config['in_shape'],
+                       im_size=model_config['im_size'],
                        hidden=model_config['hidden'], 
                        out_shape=model_config['out_shape'])
         else:
@@ -116,7 +118,6 @@ def train(net,
         running_loss += loss.item() * images.shape[0]
 
         del images, labels, outputs, loss, predicted
-        torch.cuda.empty_cache()
 
     running_loss /= len(trainloader.dataset)
     accuracy = running_corrects / len(trainloader.dataset)
@@ -128,8 +129,9 @@ def train(net,
     return running_loss, accuracy
 
 
-def test(net, testloader, criterion, device):
+def test(net, testloader, device):
     net.eval()
+    criterion = nn.CrossEntropyLoss()
     corrects, total_loss = 0, 0.0
 
     with torch.no_grad():
