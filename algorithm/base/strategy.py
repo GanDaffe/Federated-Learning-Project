@@ -10,6 +10,7 @@ class FedAvg(fl.server.strategy.Strategy):
             num_clients: int,
             testloader, 
             iids,
+            device,
             fraction_fit: float = 1.0,
             fraction_evaluate: float = 1.0,
             min_fit_clients: int = 2,
@@ -34,6 +35,7 @@ class FedAvg(fl.server.strategy.Strategy):
         self.decay_rate = decay_rate
         self.current_parameters = current_parameters
         self.testloader = testloader
+        self.device = device
         self.result = {"round": [], "train_loss": [], "train_accuracy": [], "test_loss": [], "test_accuracy": []}
 
 
@@ -128,7 +130,7 @@ class FedAvg(fl.server.strategy.Strategy):
         test_net = copy.deepcopy(self.net)  
         set_parameters(test_net, parameters_to_ndarrays(parameters))    
        
-        loss, accuracy = test(test_net, self.testloader)
+        loss, accuracy = test(test_net, self.testloader, self.device)
 
         return float(loss), {"accuracy": accuracy}
 
