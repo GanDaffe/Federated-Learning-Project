@@ -1,15 +1,13 @@
-from federated_algo.base.base_client import BaseClient 
-from utils.training_utils import set_parameters
-from __init__ import * 
-from federated_algo.scaffold.scaffold_utils import set_c_local, load_c_local
+from algorithm.base.client import BaseClient 
+from utils.train_helper import set_parameters
+from import_lib import * 
+from algorithm.scaffold.scaffold_utils import set_c_local, load_c_local
+from logging import INFO, log
 
 class SCAFFOLD_CLIENT(BaseClient):
-    def __init__(self, cid, net, trainloader, valloader, c_local, device):
-        self.cid = cid
-        self.net = net
-        self.device=device
-        self.trainloader = trainloader
-        self.valloader = valloader
+    def __init__(self, *args, c_local, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.device = self.exp_config['device']
         self.criterion = torch.nn.CrossEntropyLoss().to(self.device)
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr=0.1, momentum=0.9)
         self.c_local = c_local
@@ -20,7 +18,6 @@ class SCAFFOLD_CLIENT(BaseClient):
         results = self.train_scaffold(
             net=self.net,
             trainloader=self.trainloader,
-            valloader=self.valloader,
             epochs=1,
             learning_rate=0.1,
             device=self.device,
@@ -30,7 +27,7 @@ class SCAFFOLD_CLIENT(BaseClient):
         )
         return self.get_parameters(self.net), len(self.trainloader.dataset), results
     
-    def train_scaffold(self, net, trainloader, valloader, epochs, learning_rate, device, config, c_local, parameters):
+    def train_scaffold(self, net, trainloader, epochs, learning_rate, device, config, c_local, parameters):
         """Train the model on the training set."""
         c_global_bytes = config['c_global']
         # Deserialize c_global list from bytes to float64
@@ -43,16 +40,24 @@ class SCAFFOLD_CLIENT(BaseClient):
 
         net.to(device)  # Move model to GPU if available TODO: Make everything work on GPU.
         net.train()
+        
+        loss_avg, running_corrects = 0, 0
 
         for _ in range(epochs):
             prebatch_params = [param.detach().clone() for param in self.net.parameters()]
+
             for images, labels in trainloader:
                 images, labels = images.to(device), labels.to(device)
 
                 self.optimizer.zero_grad()
-                self.criterion(net(images.to(device)), labels.to(device)).backward()
+                outputs = net(images)
+                loss = self.criterion(outputs, labels)
                 
+                predicted = torch.argmax(outputs, dim=1)
+                running_corrects += torch.sum(predicted == labels).item()
+                loss_avg += loss.item()
 
+                loss.backward()
                 self.optimizer.step()
 
             # Local updates to the client model cf. Scaffold equation (n°3)
@@ -98,32 +103,10 @@ class SCAFFOLD_CLIENT(BaseClient):
         # Serialize to bytes
         c_delta_bytes = c_delta_numpy.tobytes()
 
-        val_loss, val_acc = self.test_scaffold(net, valloader, device)
-
         results = { 
-            "val_loss": val_loss,
-            "val_accuracy": val_acc,
+            "val_loss": loss_avg / len(trainloader.dataset),
+            "val_accuracy": running_corrects / len(trainloader.dataset),
             "c_delta": c_delta_bytes,
         }
         return results
-
-    def test_scaffold(self, net, testloader, device):
-        """Validate the model on the test set."""
-        criterion = torch.nn.CrossEntropyLoss()
-        correct, loss = 0, 0.0
-        with torch.no_grad():
-            for images, labels in testloader:
-                images = images.to(device)
-                labels = labels.to(device)
-                outputs = net(images)
-                loss += criterion(outputs, labels).item()
-                correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
-        accuracy = correct / len(testloader.dataset)
-        loss = loss / len(testloader)
-        return loss, accuracy
     
-    def evaluate(self, parameters, config):
-        """Evaluate the model on the data this client has."""
-        set_parameters(self.net, parameters)
-        loss, accuracy = self.test_scaffold(self.net, self.valloader, self.device)
-        return loss, len(self.valloader.dataset), {"accuracy": accuracy}

@@ -1,21 +1,27 @@
-from __init__ import * 
+from import_lib import * 
+from utils.train_helper import test
 
-class FedAvg(fl.server.strategy.Strategy):
+class FedAvg(fl.server.strategy.Strategy): 
+
     def __init__(
-        self,
-        num_rounds: int,
-        num_clients: int,
-        iids,
-        fraction_fit: float = 1.0,
-        fraction_evaluate: float = 1.0,
-        min_fit_clients: int = 2,
-        min_evaluate_clients: int = 2,
-        min_available_clients: int = 2,
-        learning_rate: float = 0.1,
-        decay_rate: float = 0.995,
-        current_parameters: Optional[Parameters] = None
-    ) -> None:
+            self, 
+            net,
+            num_rounds: int,
+            num_clients: int,
+            testloader, 
+            iids,
+            fraction_fit: float = 1.0,
+            fraction_evaluate: float = 1.0,
+            min_fit_clients: int = 2,
+            min_evaluate_clients: int = 2,
+            min_available_clients: int = 2,
+            learning_rate: float = 0.1,
+            decay_rate: float = 0.995,
+            current_parameters: Optional[Parameters] = None):
+        
+
         super().__init__()
+        self.net = net
         self.num_rounds = num_rounds
         self.num_clients = num_clients
         self.fraction_fit = fraction_fit
@@ -27,13 +33,14 @@ class FedAvg(fl.server.strategy.Strategy):
         self.iids = iids
         self.decay_rate = decay_rate
         self.current_parameters = current_parameters
+        self.testloader = testloader
         self.result = {"round": [], "train_loss": [], "train_accuracy": [], "test_loss": [], "test_accuracy": []}
 
 
-    def __repr__(self) -> str:
-        return "FedAvg"
-
-
+    def __repr__(self) -> str: 
+        return 'FedAvg' 
+    
+    
     def initialize_parameters(
         self, client_manager: ClientManager
     ) -> Optional[Parameters]:
@@ -85,15 +92,9 @@ class FedAvg(fl.server.strategy.Strategy):
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, EvaluateIns]]:
         """Configure the next round of evaluation."""
-        
-        sample_size, min_num_clients = self.num_evaluation_clients(client_manager.num_available())
-        clients = client_manager.sample(num_clients=sample_size, min_num_clients=min_num_clients)
 
-        config = {}
-        evaluate_ins = EvaluateIns(parameters, config)
 
-        evaluate_configs = [(client, evaluate_ins) for client in clients]
-        return evaluate_configs
+        return []
 
 
     def aggregate_evaluate(
@@ -104,30 +105,32 @@ class FedAvg(fl.server.strategy.Strategy):
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
         """Aggregate evaluation losses using weighted average."""
 
-        loss_aggregated = weighted_loss_avg([(evaluate_res.num_examples, evaluate_res.loss) for _, evaluate_res in results])
         metrics_aggregated = {}
 
-        corrects = [round(evaluate_res.num_examples * evaluate_res.metrics["accuracy"]) for _, evaluate_res in results]
-        examples = [evaluate_res.num_examples for _, evaluate_res in results]
-        accuracy = sum(corrects) / sum(examples)
+        loss, metrics = self.evaluate(server_round, self.current_parameters)
 
-        self.result["test_loss"].append(loss_aggregated)
-        self.result["test_accuracy"].append(accuracy)
-        print(f"test_loss: {loss_aggregated} - test_acc: {accuracy}")
-        
-        os.makedirs("result", exist_ok=True)
+        self.result["test_loss"].append(loss)
+        self.result["test_accuracy"].append(metrics['accuracy'])
+        print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
+
         if server_round == self.num_rounds:
             df = pd.DataFrame(self.result)
             df.to_csv(f"result/fedavg{self.iids}.csv", index=False)
-            
-        return loss_aggregated, metrics_aggregated
+
+        return loss, metrics_aggregated
 
 
     def evaluate(
         self, server_round: int, parameters: Parameters
     ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
         """Evaluate global model parameters using an evaluation function."""
-        return None
+
+        test_net = copy.deepcopy(self.net)  
+        set_parameters(test_net, parameters_to_ndarrays(parameters))    
+       
+        loss, accuracy = test(test_net, self.testloader)
+
+        return float(loss), {"accuracy": accuracy}
 
 
     def num_fit_clients(self, num_available_clients: int) -> Tuple[int, int]:

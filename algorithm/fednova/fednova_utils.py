@@ -1,5 +1,5 @@
 from torch.optim.optimizer import required
-from __init__ import *
+from import_lib import *
 from torch import nn
 
 class ProxSGD(torch.optim.Optimizer):  # pylint: disable=too-many-instance-attributes

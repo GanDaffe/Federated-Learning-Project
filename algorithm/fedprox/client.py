@@ -1,5 +1,5 @@
-from federated_algo.base.base_client import BaseClient
-from utils.training_utils import set_parameters, train
+from algorithm.base.client import BaseClient
+from utils.train_helper import set_parameters, train
 
 class FedProxClient(BaseClient):
     def __init__(self, cid, net, criterion, trainloader, valloader):

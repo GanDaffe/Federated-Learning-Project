@@ -1,5 +1,5 @@
-from __init__ import * 
-from federated_algo.base.base_algo import FedAvg
+from import_lib import * 
+from algorithm.base.strategy import FedAvg
 
 class FedProx(FedAvg):
     def __init__(
@@ -62,19 +62,17 @@ class FedProx(FedAvg):
         failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
         """Aggregate evaluation losses using weighted average."""
-        loss_aggregated = weighted_loss_avg([(evaluate_res.num_examples, evaluate_res.loss) for _, evaluate_res in results])
+
         metrics_aggregated = {}
 
-        corrects = [round(evaluate_res.num_examples * evaluate_res.metrics["accuracy"]) for _, evaluate_res in results]
-        examples = [evaluate_res.num_examples for _, evaluate_res in results]
-        accuracy = sum(corrects) / sum(examples)
+        loss, metrics = self.evaluate(server_round, self.current_parameters)
 
-        self.result["test_loss"].append(loss_aggregated)
-        self.result["test_accuracy"].append(accuracy)
-        print(f"test_loss: {loss_aggregated} - test_acc: {accuracy}")
+        self.result["test_loss"].append(loss)
+        self.result["test_accuracy"].append(metrics['accuracy'])
+        print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
 
         if server_round == self.num_rounds:
             df = pd.DataFrame(self.result)
-            df.to_csv(f"result/fedprox{self.iids}.csv", index=False)
-            
-        return loss_aggregated, metrics_aggregated
+            df.to_csv(f"result/fedprox_{self.iids}.csv", index=False)
+
+        return loss, metrics_aggregated

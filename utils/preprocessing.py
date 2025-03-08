@@ -1,9 +1,6 @@
 import numpy as np
-from collections import Counter, OrderedDict
-from typing import List, Dict
+from typing import List
 import random
-import math
-import copy
 import torch
 import pandas as pd 
 from torch.distributions.dirichlet import Dirichlet
@@ -11,12 +8,48 @@ from torchvision.datasets import CIFAR10, CIFAR100, EMNIST, FashionMNIST
 import torchvision.transforms as transforms
 import torch.nn as nn
 from sklearn.cluster import OPTICS
-from models import fMLP, fCNN, eMLP, eCNN, CNN2, CNN4, LSTM, CustomCNN, ResNet101, ResNet50, VGG16, CustomDataset
+from models import CustomDataset
 from tqdm import tqdm 
+import string
+import emoji
+from utils.distance import hellinger, jensen_shannon_divergence_distance
 
-from distance_utils import hellinger, jensen_shannon_divergence_distance
+def clean_text(tweet):
+    import re
 
+    urlPattern        = r"((http://)[^ ]*|(https://)[^ ]*|(www\.)[^ ]*)"
+    userPattern       = '@[^\s]+'
+    hashtagPattern    = '#[^\s]+'
+    sequencePattern   = r"(.)\1\1+"
+    seqReplacePattern = r"\1\1"
 
+    tweet = tweet.lower()
+
+    tweet = re.sub(urlPattern, '', tweet)
+
+    tweet = re.sub(userPattern, '', tweet)
+
+    tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
+
+    tweet = re.sub(r'/', ' / ', tweet)
+
+    tweet = emoji.replace_emoji(tweet, replace='')
+
+    tweet = tweet.replace('\r', '').replace('\n', ' ').replace('\n', ' ').lower()
+    tweet = re.sub(r"(?:\@|https?\://)\S+", "", tweet)
+    tweet = re.sub(r'[^\x00-\x7f]', r'', tweet)
+    banned_list = string.punctuation + 'Ã' + '±' + 'ã' + '¼' + 'â' + '»' + '§'
+    table = str.maketrans('', '', banned_list)
+    tweet = tweet.translate(table)
+
+    tweet = " ".join(word.strip() for word in re.split('#(?!(?:hashtag)\b)[\w-]+(?=(?:\s+#[\w-]+)*\s*$)', tweet))
+    tweet = " ".join(word.strip() for word in re.split('#|_', tweet))
+
+    tweet = ' '.join([word if ('$' not in word) and ('&' not in word) else '' for word in tweet.split(' ')])
+
+    tweet = re.sub("\s\s+", " ", tweet)
+
+    return tweet.strip()
 
 def renormalize(dist: torch.tensor, labels: List[int], label: int):
     idx = labels.index(label)
@@ -85,7 +118,7 @@ def load_data(dataset: str):
         from tensorflow.keras.preprocessing.text import Tokenizer
         from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-        file_path = Path("/dataset/training.1600000.processed.noemoticon.csv")
+        file_path = Path("/content/dataset/training.1600000.processed.noemoticon.csv")
 
         if file_path.exists():
             print("Dataset is already dowloaded!")
@@ -100,16 +133,21 @@ def load_data(dataset: str):
 
         columns = ['label', 'id', 'date', 'flag', 'user', 'text']
         df = pd.read_csv(file_path, names=columns, encoding='latin1')
+        df = df[['label' ,'text']]
 
+        df['label'] = df['label'].replace({4: 1} )
+        df['preprocessing_text'] = df['text'].apply(clean_text)
+
+        print(df.head())
         max_words = 2000
         max_len = 500
 
         tokenizer = Tokenizer(num_words=max_words)
         tokenizer.fit_on_texts(df['text'])
-        sequences = tokenizer.texts_to_sequences(df['text'])
+        sequences = tokenizer.texts_to_sequences(df['preprocessing_text'])
 
         X = pad_sequences(sequences, maxlen=max_len)
-        y = [0 if i == 0 else 1 for i in df['label'].values]
+        y = df['label'].values
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         trainset = CustomDataset(X_train, y_train)
@@ -222,4 +260,5 @@ def partition_data(dataset, _iid: int, non_iid_diff : int, num_clients: int, alp
         label_dist.append({classes_[j]: counter.get(j, 0) for j in range(num_classes)})
 
     return ids, label_dist
+
 

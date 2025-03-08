@@ -3,8 +3,8 @@ import torch
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
 from utils.data_processing import load_data, partition_data, clustering
 from utils.training_utils import compute_entropy
-from run_helper import run_simulation
-
+from run import run_simulation
+from torch import nn
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Training on {DEVICE} using PyTorch {torch.__version__} and Flower {fl.__version__}")
 
@@ -14,63 +14,99 @@ if __name__ == '__main__':
     # ---------- HYPER PARAMETERS -------------
 
     
-    NUM_ROUNDS = 800
-    NUM_CLIENTS = 30
-    NUM_IIDS = 6
-    DIFF_DISTRIBUTION_NON_IID_CLIENTS = 12     # 2 * DIFF_DISTRIBUTION_NON_IID_CLIENTS + NUM_IIDS <= NUM_CLIENTS
-    BATCH_SIZE = 100
-    LOSS_FN   = 'multiclass' # multiclass / binary
-    DATASET   = 'cifar10'    # emnist / fmnist / cifar10 / cifar100 / sentiment140 (take long time to load)
-    MODEL     = 'cnn'     # resnet101 / resnet50 / vgg16 / mlp / cnn / lstm
-    DISTANCE  = 'hellinger' # hellinger / jensenshannon / cosine ... 
-    FED = 'fedadpimp' # fedadp / scaffold / fedadpimp / fedprox / fedimp / fedavg / fednova
+    experiment_config = {
+        'algo':                     'fedavg', 
+        'num_round':                800, 
+        'num_clients':              30, 
+        'iids':                     6, 
+        'diff_non_iid':             12, 
+        'batch_size':               100,
+        'dataset_name':             'cifar10',  # emnist / fmnist / cifar10 / cifar100 / sentimen140 (take long time to load)
+        'cluster_distance':         'hellinger', # hellinger / jensenshannon / cosine ... 
+        'alpha':                    100, 
+        'beta':                     0.1, 
+    }
+
+    model_config = {
+        'model_name':               'resnet50', 
+        'num_layer':                2,  # For CNN only
+        'out_shape':                10, # 2 for sentimen140, 100 for cifar100 otherwise 10
+        'in_shape':                 3,
+        'hidden':                   32, 
+    },
+    
+    client_config =  {
+        'device':                   DEVICE, 
+        "var_local_epochs":         True,  # Whether to use variable local epochs
+        "var_min_epochs":           1,  # Minimum number of local epochs
+        "var_max_epochs":           5,  # Maximum number of local epochs
+        "seed":                     42,  # Random seed for reproducibility
+        "optimizer": {
+            "lr":       0.1,  # Learning rate
+            "momentum": 0.9,  # Momentum for SGD
+            "mu":       0.005,  # Proximal term (adjusted in FedNovaClient if needed)
+        },
+    }
+    
+
+    strategy_config = {
+        'gmf':                      0, 
+        'optimizer': {
+            'gmf':      0, 
+            'lr':       0.1,                 
+        },
+        'device':                   DEVICE
+    },
 
 
     # ----------- LOADING THE DATA -------------
 
 
-    trainset, testset = load_data(DATASET)
-    ids, dist = partition_data(trainset, num_clients=NUM_CLIENTS, _iid=NUM_IIDS, non_iid_diff=DIFF_DISTRIBUTION_NON_IID_CLIENTS, alpha=100, beta=0.01, dataset_name=DATASET)
+    trainset, testset = load_data(experiment_config['dataset_name'])
+    ids, dist = partition_data(trainset, 
+                               num_clients=experiment_config['num_clients'], 
+                               _iid=experiment_config['iids'], 
+                               non_iid_diff=experiment_config['diff_non_iid'], 
+                               alpha=experiment_config['alpha'], 
+                               beta=experiment_config['beta'], 
+                               dataset_name=experiment_config['dataset_name'])
 
-    client_cluster_index, distrib_ = clustering(trainset.classes, len(trainset), NUM_CLIENTS, dist, distance=DISTANCE, min_smp=2)
+    client_cluster_index, distrib_ = clustering(trainset.classes, 
+                                                len(trainset), 
+                                                experiment_config['num_clients'], 
+                                                dist, 
+                                                distance=experiment_config['cluster_distance'], 
+                                                min_smp=2)
 
     print(f'Number of Clusters: {len(list(set(client_cluster_index.values())))}')
     for k, v in client_cluster_index.items():
         print(f'Client {k + 1}: Cluster: {v}')
 
-    for i in range(NUM_CLIENTS):
+    for i in range(experiment_config['num_clients']):
         print(f"Client {i+1}: {dist[i]}")
 
-    entropies = [compute_entropy(dist[i]) for i in range(NUM_CLIENTS)]
+    entropies = [compute_entropy(dist[i]) for i in range(experiment_config['num_clients'])]
     trainloaders = []
-    valloaders = []
+    testloader = DataLoader(testset, batch_size=experiment_config['batch_size'])
 
-    base = len(testset) // NUM_CLIENTS 
-    extra = len(testset) % NUM_CLIENTS
+    for i in range(experiment_config['num_clients']):
+        trainloaders.append(DataLoader(trainset, batch_size=experiment_config['batch_size'], sampler=SubsetRandomSampler(ids[i])))
+       
 
-    val_length = [base + (1 if i < extra else 0) for i in range(NUM_CLIENTS)]
-    valsets = random_split(testset, val_length)
-
-    for i in range(NUM_CLIENTS):
-        trainloaders.append(DataLoader(trainset, batch_size=BATCH_SIZE, sampler=SubsetRandomSampler(ids[i])))
-        valloaders.append(DataLoader(valsets[i], batch_size=BATCH_SIZE))
-
-    client_dataset_ratio: float = int((len(trainset) / NUM_CLIENTS)) / len(trainset)
+    client_dataset_ratio: float = int((len(trainset) / experiment_config['num_clients'])) / len(trainset)
 
     # ------------ RUN SIMULATION ---------------
 
-
-    run_simulation( algo=FED,
-                    model=MODEL,
-                    dataset=DATASET,
-                    trainloader=trainloaders, 
-                    valloader=valloaders,
-                    criterion=LOSS_FN, 
-                    iids=NUM_IIDS,
-                    num_clients=NUM_CLIENTS,
-                    device=DEVICE,
-                    num_round=NUM_ROUNDS,
-                    client_dataset_ratio=client_dataset_ratio,
-                    client_cluster_index=client_cluster_index,
-                    entropies=entropies
-                )
+    run_simulation(
+        experiment_config['algo'], 
+        trainloaders,
+        testloader, 
+        client_cluster_index, 
+        nn.CrossEntropyLoss(), 
+        experiment_config, 
+        entropies, 
+        client_config, 
+        model_config,
+        strategy_config,
+        client_dataset_ratio
+    )

@@ -1,28 +1,26 @@
-from __init__ import * 
-from federated_algo.base.base_algo import FedAvg
+from algorithm.base.strategy import FedAvg 
+from import_lib import * 
 
-class BoxFedv2(FedAvg):
-    def __init__(
-        self,
-        *args,
-        entropies: List[float],
-        temperature: float = 1.5,
-        alpha: int = 5,
-        **kwargs,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-     
+class BoxFedv2(FedAvg): 
+
+    def __init__(self, 
+                 *args, 
+                 entropies: List[float], 
+                 temperature: float = 1.5, 
+                 alpha: int = 5, 
+                 **kwargs
+    ): 
+        super().__init__(*args, **kwargs) 
+
         self.entropies = entropies
-        self.temperature = temperature
-        self.alpha = alpha
+        self.temperature = temperature 
+        self.alpha = alpha 
 
-        self.current_angles = [None] * self.num_clients
-        self.result = {"round": [], "train_loss": [], "train_accuracy": [], "test_loss": [], "test_accuracy": []}
-
-
-    def  __repr__(self) -> str:
-        return "BoxFed"
-
+    
+    def __repr__(self): 
+        return 'FedAdpImp'
+    
+    
     def aggregate_cluster(self, cluster_clients: List[FitRes]):
         weight_results = [(parameters_to_ndarrays(fit_res.parameters),
                             fit_res.num_examples * np.exp(self.entropies[int(fit_res.metrics["id"])]/self.temperature))
@@ -135,26 +133,24 @@ class BoxFedv2(FedAvg):
 
         return self.current_parameters, metrics_aggregated
     
-def aggregate_evaluate(
+    def aggregate_evaluate(
         self,
         server_round: int,
         results: List[Tuple[ClientProxy, EvaluateRes]],
         failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
         """Aggregate evaluation losses using weighted average."""
-        loss_aggregated = weighted_loss_avg([(evaluate_res.num_examples, evaluate_res.loss) for _, evaluate_res in results])
+
         metrics_aggregated = {}
 
-        corrects = [round(evaluate_res.num_examples * evaluate_res.metrics["accuracy"]) for _, evaluate_res in results]
-        examples = [evaluate_res.num_examples for _, evaluate_res in results]
-        accuracy = sum(corrects) / sum(examples)
+        loss, metrics = self.evaluate(server_round, self.current_parameters)
 
-        self.result["test_loss"].append(loss_aggregated)
-        self.result["test_accuracy"].append(accuracy)
-        print(f"test_loss: {loss_aggregated} - test_acc: {accuracy}")
+        self.result["test_loss"].append(loss)
+        self.result["test_accuracy"].append(metrics['accuracy'])
+        print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
 
         if server_round == self.num_rounds:
             df = pd.DataFrame(self.result)
-            df.to_csv(f"result/fedadpimp{self.iids}.csv", index=False)
-            
-        return loss_aggregated, metrics_aggregated
+            df.to_csv(f"result/fedadpimp_{self.iids}.csv", index=False)
+
+        return loss, metrics_aggregated
