@@ -104,8 +104,8 @@ class SCAFFOLD_CLIENT(BaseClient):
         c_delta_bytes = c_delta_numpy.tobytes()
 
         results = { 
-            "val_loss": loss_avg / len(trainloader.dataset),
-            "val_accuracy": running_corrects / len(trainloader.dataset),
+            "loss": loss_avg / len(trainloader.dataset),
+            "accuracy": running_corrects / len(trainloader.dataset),
             "c_delta": c_delta_bytes,
         }
         return results
