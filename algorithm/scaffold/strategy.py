@@ -6,7 +6,6 @@ class SCAFFOLD(FedAvg):
     def __init__(
         self,
         *args,
-        global_model,
         weight_decay=0.1, 
         **kwargs, 
     ) -> None:
@@ -15,11 +14,11 @@ class SCAFFOLD(FedAvg):
        
         self.weight_decay = weight_decay
 
-        self.c_global = [torch.zeros_like(param) for param in global_model.parameters()]
+        self.c_global = [torch.zeros_like(param) for param in self.net.parameters()]
         self.current_weights = parameters_to_ndarrays(self.current_parameters)
         self.num_clients = self.num_clients
-
-        self.result = {"round": [], "test_loss": [], "test_accuracy": []}
+        self.global_learning_rate = self.learning_rate
+        self.result = {"round": [], "train_loss": [], "train_accuracy": [], "test_loss": [], "test_accuracy": []}
 
     def __repr__(self) -> str:
         return 'SCAFFOLD'
@@ -112,7 +111,7 @@ class SCAFFOLD(FedAvg):
     
     def evaluate(
         self, server_round: int, parameters: Parameters
-    ) -> Optional[tuple[float, dict[str, Scalar]]]:
+    ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
         """Evaluate model parameters using an evaluation function."""
 
         test_net = copy.deepcopy(self.net)  
