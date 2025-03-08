@@ -1,14 +1,11 @@
 from algorithm.fedadp import FedAdp
 from algorithm.fedavgM import FedAvgM 
 from algorithm.fedAdam import FedAdam
-from algorithm.fedadagrad import FedAdagrad
+from algorithm.fedAdaGrad import FedAdagrad
 
 from algorithm.dyfedimp import DyFedImp
 from algorithm.fedimp import FedImp
 from algorithm.fedyogi import FedYogi
-
-from algorithm.fednova.client import FedNovaClient
-from algorithm.fednova.strategy import FedNova
 
 from algorithm.base.client import BaseClient
 from algorithm.base.strategy import FedAvg
