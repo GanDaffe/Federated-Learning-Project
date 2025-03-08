@@ -15,7 +15,7 @@ class BoxFedv2(FedAvg):
         self.entropies = entropies
         self.temperature = temperature 
         self.alpha = alpha 
-
+        self.current_angles = [None] * self.num_clients
     
     def __repr__(self): 
         return 'FedAdpImp'
