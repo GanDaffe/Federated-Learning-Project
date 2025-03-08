@@ -10,7 +10,7 @@ class FedAdp(FedAvg):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.alpha = alpha
-        
+        self.current_angles = [None] * self.num_clients
         self.result = {"round": [], "train_loss": [], "train_accuracy": [], "test_loss": [], "test_accuracy": []}
 
 
