@@ -2,7 +2,7 @@ import os
 import numpy as np
 import torch
 def load_c_local(partition_id: int):
-    path = "/algorithm/scaffold/training_process_files/c_local_folder/" + str(partition_id) +".txt"
+    path = "c_local_folder/" + str(partition_id) +".txt"
     if os.path.exists(path):
         with open(path, 'rb') as f:
             c_delta_bytes = f.read()
@@ -14,7 +14,7 @@ def load_c_local(partition_id: int):
 
 # Custom function to serialize to bytes and save c_local variable inside a file
 def set_c_local(partition_id: int, c_local):
-    path = "/federated_algo/scaffold/training_process_files/c_local_folder/" + str(partition_id) +".txt"
+    path = "c_local_folder/" + str(partition_id) +".txt"
 
     if not os.path.exists(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
