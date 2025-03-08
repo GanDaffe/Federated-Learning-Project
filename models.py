@@ -7,50 +7,36 @@ def calculate(size, kernel, stride, padding):
 
 
 class CNN(nn.Module):
-    def __init__(self, num_layer, im_size, in_shape, hidden, out_shape, dropout_rate=0.2):
+    def __init__(self, num_layer, im_size, in_shape, hidden, out_shape):
         super(CNN, self).__init__()
         out = im_size
-
         self.conv_layers = nn.ModuleList()
-        factor = 1  
+        factor = 1
+        current_in_channels = in_shape
 
         for i in range(num_layer):
-            self.conv_layers.append(nn.Conv2d(in_shape, factor * hidden, kernel_size=3, stride=1, padding=1))
+            self.conv_layers.append(nn.Conv2d(current_in_channels, factor * hidden, kernel_size=3, stride=1, padding=1))
             out = calculate(out, kernel=3, stride=1, padding=1)
-
-            self.conv_layers.append(nn.BatchNorm2d(factor * hidden))
-
             self.conv_layers.append(nn.ReLU())
-
             self.conv_layers.append(nn.MaxPool2d(kernel_size=2, stride=2, padding=0))
             out = calculate(out, kernel=2, stride=2, padding=0)
-
-            in_shape = factor * hidden
-
+            
+            if out < 1:
+                raise ValueError(f"Output size became {out} at layer {i+1}. Reduce num_layer or increase im_size.")
+                
+            current_in_channels = factor * hidden
             if (i + 1) % 2 == 0:
                 factor *= 2
 
         self.flatten = nn.Flatten()
-
-  
-        fc_input_size = out * out * in_shape
-        self.fc_layers = nn.Sequential(
-            nn.Linear(fc_input_size, 512), 
-            nn.BatchNorm1d(512),  
-            nn.ReLU(),
-            nn.Dropout(p=dropout_rate), 
-            nn.Linear(512, out_shape)  
-        )
+        self.fc = nn.Linear(in_features=out * out * current_in_channels, out_features=out_shape)
 
     def forward(self, x):
         for layer in self.conv_layers:
             x = layer(x)
-
         x = self.flatten(x)
-        x = self.fc_layers(x)
-
+        x = self.fc(x)
         return x
-
 
 class LSTM(nn.Module):
 
