@@ -1,8 +1,8 @@
 import flwr as fl
 import torch
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
-from utils.data_processing import load_data, partition_data, clustering
-from utils.training_utils import compute_entropy
+from utils.preprocessing import load_data, partition_data, clustering
+from utils.train_helper import compute_entropy
 from run import run_simulation
 from torch import nn
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -12,28 +12,35 @@ if __name__ == '__main__':
     
 
     # ---------- HYPER PARAMETERS -------------
-
+    size_img = {
+        'fmnist': 28, 
+        'cifar10': 32, 
+        'cifar100': 32,
+        'emnist': 28
+    }
     
     experiment_config = {
-        'algo':                     'fedavg', 
-        'num_round':                800, 
+        'algo':                     'fedprox', 
+        'num_round':                2, 
         'num_clients':              30, 
         'iids':                     6, 
         'diff_non_iid':             12, 
         'batch_size':               100,
-        'dataset_name':             'cifar10',  # emnist / fmnist / cifar10 / cifar100 / sentimen140 (take long time to load)
+        'dataset_name':             'fmnist',  # emnist / fmnist / cifar10 / cifar100 / sentimen140 (take long time to load)
         'cluster_distance':         'hellinger', # hellinger / jensenshannon / cosine ... 
         'alpha':                    100, 
         'beta':                     0.1, 
+        'device':                   DEVICE
     }
 
     model_config = {
-        'model_name':               'resnet50', 
+        'model_name':               'cnn', 
         'num_layer':                2,  # For CNN only
         'out_shape':                10, # 2 for sentimen140, 100 for cifar100 otherwise 10
-        'in_shape':                 3,
-        'hidden':                   32, 
-    },
+        'in_shape':                 1,
+        'hidden':                   32,
+        'im_size':                  size_img[experiment_config['dataset_name']]
+    }
     
     client_config =  {
         'device':                   DEVICE, 
@@ -45,7 +52,7 @@ if __name__ == '__main__':
             "lr":       0.1,  # Learning rate
             "momentum": 0.9,  # Momentum for SGD
             "mu":       0.005,  # Proximal term (adjusted in FedNovaClient if needed)
-        },
+        }
     }
     
 
@@ -56,7 +63,7 @@ if __name__ == '__main__':
             'lr':       0.1,                 
         },
         'device':                   DEVICE
-    },
+    }
 
 
     # ----------- LOADING THE DATA -------------
