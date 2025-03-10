@@ -3,6 +3,7 @@ from typing import List
 import random
 import torch
 import pandas as pd 
+from collections import Counter
 from torch.distributions.dirichlet import Dirichlet
 from torchvision.datasets import CIFAR10, CIFAR100, EMNIST, FashionMNIST
 import torchvision.transforms as transforms
@@ -115,8 +116,8 @@ def load_data(dataset: str):
         from sklearn.model_selection import train_test_split
         import zipfile
         from pathlib import Path
-        from tensorflow.keras.preprocessing.text import Tokenizer
-        from tensorflow.keras.preprocessing.sequence import pad_sequences
+        from keras.preprocessing.text import Tokenizer
+        from keras.preprocessing.sequence import pad_sequences
 
         file_path = Path("/content/dataset/training.1600000.processed.noemoticon.csv")
 
