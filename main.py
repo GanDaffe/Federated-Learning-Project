@@ -20,16 +20,16 @@ if __name__ == '__main__':
     }
     
     experiment_config = {
-        'algo':                     'fedprox', 
-        'num_round':                2, 
+        'algo':                     'fednova',  #All letters in lowercase, no space
+        'num_round':                3, 
         'num_clients':              30, 
         'iids':                     6, 
         'diff_non_iid':             12, 
         'batch_size':               100,
         'dataset_name':             'fmnist',  # emnist / fmnist / cifar10 / cifar100 / sentimen140 (take long time to load)
-        'cluster_distance':         'hellinger', # hellinger / jensenshannon / cosine ... 
+        'cluster_distance':         'hellinger', # hellinger / jensenshannon / cosine ... for fedadpimp experiment only
         'alpha':                    100, 
-        'beta':                     0.1, 
+        'beta':                     0.01, 
         'device':                   DEVICE
     }
 
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         "var_max_epochs":           5,  # Maximum number of local epochs
         "seed":                     42,  # Random seed for reproducibility
         "optimizer": {
-            "lr":       0.1,  # Learning rate
+            "lr":       0.01,  # Learning rate
             "momentum": 0.9,  # Momentum for SGD
             "mu":       0.005,  # Proximal term (adjusted in FedNovaClient if needed)
         }
@@ -59,8 +59,7 @@ if __name__ == '__main__':
     strategy_config = {
         'gmf':                      0, 
         'optimizer': {
-            'gmf':      0, 
-            'lr':       0.1,                 
+            'gmf':      0              
         },
         'device':                   DEVICE
     }
