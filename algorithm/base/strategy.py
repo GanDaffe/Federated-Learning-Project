@@ -1,10 +1,10 @@
 from import_lib import * 
-from utils.train_helper import test
 
 class FedAvg(fl.server.strategy.Strategy): 
 
     def __init__(
             self, 
+            algo_name: str,
             net,
             num_rounds: int,
             num_clients: int,
@@ -16,12 +16,12 @@ class FedAvg(fl.server.strategy.Strategy):
             min_fit_clients: int = 2,
             min_evaluate_clients: int = 2,
             min_available_clients: int = 2,
-            learning_rate: float = 0.1,
-            decay_rate: float = 0.995,
+            learning_rate: float = 0.01,
             current_parameters: Optional[Parameters] = None):
         
 
         super().__init__()
+        self.algo_name = algo_name
         self.net = net
         self.num_rounds = num_rounds
         self.num_clients = num_clients
@@ -31,11 +31,11 @@ class FedAvg(fl.server.strategy.Strategy):
         self.min_evaluate_clients = min_evaluate_clients
         self.min_available_clients = min_available_clients
         self.learning_rate = learning_rate
-        self.iids = iids
-        self.decay_rate = decay_rate
+        self.iids = iids,
         self.current_parameters = current_parameters
         self.testloader = testloader
         self.device = device
+
         self.result = {"round": [], "train_loss": [], "train_accuracy": [], "test_loss": [], "test_accuracy": []}
 
 
@@ -58,7 +58,6 @@ class FedAvg(fl.server.strategy.Strategy):
         clients = client_manager.sample(num_clients=sample_size, min_num_clients=min_num_clients)
 
         config = {"learning_rate": self.learning_rate}
-        self.learning_rate *= self.decay_rate
         fit_ins = FitIns(parameters, config)
 
         fit_configs = [(client, fit_ins) for client in clients]
@@ -110,14 +109,8 @@ class FedAvg(fl.server.strategy.Strategy):
         metrics_aggregated = {}
 
         loss, metrics = self.evaluate(server_round, self.current_parameters)
-
-        self.result["test_loss"].append(loss)
-        self.result["test_accuracy"].append(metrics['accuracy'])
+            
         print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
-
-        if server_round == self.num_rounds:
-            df = pd.DataFrame(self.result)
-            df.to_csv(f"result/fedavg{self.iids}.csv", index=False)
 
         return loss, metrics_aggregated
 
@@ -129,8 +122,18 @@ class FedAvg(fl.server.strategy.Strategy):
 
         test_net = copy.deepcopy(self.net)  
         set_parameters(test_net, parameters_to_ndarrays(parameters))    
-       
+        
         loss, accuracy = test(test_net, self.testloader, self.device)
+
+        if server_round != 0:  
+            self.result["test_loss"].append(loss)
+            self.result["test_accuracy"].append(accuracy)
+
+        print(f"test_loss: {loss} - test_acc: {accuracy}")
+
+        if server_round == self.num_rounds:
+            df = pd.DataFrame(self.result)
+            df.to_csv(f"result/{self.algo_name}_{self.iids}.csv", index=False)
 
         return float(loss), {"accuracy": accuracy}
 
