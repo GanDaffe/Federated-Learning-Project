@@ -22,7 +22,7 @@ import pandas as pd
 from collections import OrderedDict
 from typing import List, Tuple, Dict, Union, Optional
 from functools import partial, reduce
-from utils.train_helper import train, get_parameters, set_parameters
+from utils.train_helper import train, get_parameters, set_parameters, test
 
 def check_shapes(weights_and_covariates: NDArrays, weight_shapes: List[Tuple[int, ...]]) -> None:
     """Given a list of numpy arrays checks whether they have a repeating pattern of given shapes"""
