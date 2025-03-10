@@ -113,6 +113,6 @@ class SCAFFOLD(FedAvg):
         
         if server_round == self.num_rounds:
             df = pd.DataFrame(self.result)
-            df.to_csv(f"result/{self.aglo_name}_{self.iids}.csv", index=False)
+            df.to_csv(f"result/{self.algo_name}_{self.iids}.csv", index=False)
 
         return float(loss), {"accuracy": accuracy}
