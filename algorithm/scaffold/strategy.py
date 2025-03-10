@@ -82,18 +82,7 @@ class SCAFFOLD(FedAvg):
             # Aggregating the updates of c_global cf. Scaffold equation (n°5)
             c_delta_avg = c_delta_sum[i] / self.num_clients
             self.c_global[i] += torch.tensor(c_delta_avg)
-
-        losses = [fit_res.num_examples * fit_res.metrics["loss"] for _, fit_res in results]
-        corrects = [round(fit_res.num_examples * fit_res.metrics["accuracy"]) for _, fit_res in results]
-        examples = [fit_res.num_examples for _, fit_res in results]
-        loss = sum(losses) / sum(examples)
-        accuracy = sum(corrects) / sum(examples)
-
-        self.result["round"].append(server_round)
-        self.result["train_loss"].append(loss)
-        self.result["train_accuracy"].append(accuracy)
-        print(f"train_loss: {loss} - train_acc: {accuracy}")
-
+            
         return ndarrays_to_parameters(self.current_weights), metrics_aggregated
     
     def evaluate(
