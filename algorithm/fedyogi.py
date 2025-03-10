@@ -74,26 +74,3 @@ class FedYogi(FedAvg):
         print(f"train_loss: {loss} - train_acc: {accuracy}")
 
         return self.current_parameters, metrics_aggregated
-    
-    def aggregate_evaluate(
-        self,
-        server_round: int,
-        results: List[Tuple[ClientProxy, EvaluateRes]],
-        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
-    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
-        """Aggregate evaluation losses using weighted average."""
-
-        metrics_aggregated = {}
-
-        loss, metrics = self.evaluate(server_round, self.current_parameters)
-
-        self.result["test_loss"].append(loss)
-        self.result["test_accuracy"].append(metrics['accuracy'])
-        print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
-
-        if server_round == self.num_rounds:
-            df = pd.DataFrame(self.result)
-            df.to_csv(f"result/fedyogi_{self.iids}.csv", index=False)
-            
-
-        return loss, metrics_aggregated
