@@ -18,7 +18,6 @@ class SCAFFOLD(FedAvg):
         self.current_weights = parameters_to_ndarrays(self.current_parameters)
         self.num_clients = self.num_clients
         self.global_learning_rate = self.learning_rate
-        self.result = {"round": [], "train_loss": [], "train_accuracy": [], "test_loss": [], "test_accuracy": []}
 
     def __repr__(self) -> str:
         return 'SCAFFOLD'
@@ -84,30 +83,18 @@ class SCAFFOLD(FedAvg):
             c_delta_avg = c_delta_sum[i] / self.num_clients
             self.c_global[i] += torch.tensor(c_delta_avg)
 
+        losses = [fit_res.num_examples * fit_res.metrics["loss"] for _, fit_res in results]
+        corrects = [round(fit_res.num_examples * fit_res.metrics["accuracy"]) for _, fit_res in results]
+        examples = [fit_res.num_examples for _, fit_res in results]
+        loss = sum(losses) / sum(examples)
+        accuracy = sum(corrects) / sum(examples)
+
+        self.result["round"].append(server_round)
+        self.result["train_loss"].append(loss)
+        self.result["train_accuracy"].append(accuracy)
+        print(f"train_loss: {loss} - train_acc: {accuracy}")
+
         return ndarrays_to_parameters(self.current_weights), metrics_aggregated
-
-
-    def aggregate_evaluate(
-        self,
-        server_round: int,
-        results: List[Tuple[ClientProxy, EvaluateRes]],
-        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
-    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
-        """Aggregate evaluation losses using weighted average."""
-
-        metrics_aggregated = {}
-
-        loss, metrics = self.evaluate(server_round, self.current_parameters)
-
-        self.result["test_loss"].append(loss)
-        self.result["test_accuracy"].append(metrics['accuracy'])
-        print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
-
-        if server_round == self.num_rounds:
-            df = pd.DataFrame(self.result)
-            df.to_csv(f"result/scaffold_{self.iids}.csv", index=False)
-
-        return loss, metrics_aggregated
     
     def evaluate(
         self, server_round: int, parameters: Parameters
@@ -116,7 +103,16 @@ class SCAFFOLD(FedAvg):
 
         test_net = copy.deepcopy(self.net)  
         set_parameters(test_net, parameters_to_ndarrays(parameters))    
-       
+
         loss, accuracy = test_scaffold(test_net, self.testloader)
+        print(f"test_loss: {loss} - test_acc: {accuracy}")
+    
+        if server_round != 0: 
+            self.result["test_loss"].append(loss)
+            self.result["test_accuracy"].append(accuracy)
+        
+        if server_round == self.num_rounds:
+            df = pd.DataFrame(self.result)
+            df.to_csv(f"result/{self.aglo_name}_{self.iids}.csv", index=False)
 
         return float(loss), {"accuracy": accuracy}
