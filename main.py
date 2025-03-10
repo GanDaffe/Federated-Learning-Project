@@ -20,7 +20,7 @@ if __name__ == '__main__':
     }
     
     experiment_config = {
-        'algo':                     'fednova',  #All letters in lowercase, no space
+        'algo':                     'scaffold',  #All letters in lowercase, no space
         'num_round':                3, 
         'num_clients':              30, 
         'iids':                     6, 
