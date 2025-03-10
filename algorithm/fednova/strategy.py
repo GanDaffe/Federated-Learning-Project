@@ -1,13 +1,13 @@
 from logging import INFO, log
 from import_lib import * 
 from algorithm.base.strategy import FedAvg
-from fednova_utils import test_fednova
+from algorithm.fednova.fednova_utils import test_fednova
 
 class FedNovaStrategy(FedAvg):
     def __init__(self, exp_config, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.exp_config = exp_config
-        self.lr = self.exp_config['optimizer']['lr']
+        self.lr = self.learning_rate
         self.gmf = exp_config['optimizer'].get("gmf", 0)  # Default gmf=0 nếu không có
         self.global_momentum_buffer = []
         if self.current_parameters is not None:
@@ -67,28 +67,6 @@ class FedNovaStrategy(FedAvg):
             else:
                 self.global_parameters[i] -= layer_cum_grad
 
-    def aggregate_evaluate(
-        self,
-        server_round: int,
-        results: List[Tuple[ClientProxy, EvaluateRes]],
-        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
-    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
-        """Aggregate evaluation losses using weighted average."""
-
-        metrics_aggregated = {}
-
-        loss, metrics = self.evaluate(server_round, self.global_parameters)
-
-        self.result["test_loss"].append(loss)
-        self.result["test_accuracy"].append(metrics['accuracy'])
-        print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
-
-        if server_round == self.num_rounds:
-            df = pd.DataFrame(self.result)
-            df.to_csv(f"result/fednova{self.iids}.csv", index=False)
-
-        return loss, metrics_aggregated
-
     def evaluate(
         self, server_round: int, parameters: Parameters
     ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
@@ -97,5 +75,15 @@ class FedNovaStrategy(FedAvg):
         test_net = copy.deepcopy(self.net)  
         set_parameters(test_net, parameters_to_ndarrays(parameters))  
 
-        loss, metrics = test_fednova(test_net, self.testloader, device=self.exp_config['device'])
+        loss, metrics = test_fednova(test_net, self.testloader, device=self.device)
+        print(f"test_loss: {loss} - test_acc: {metrics['accuracy']}")
+    
+        if server_round != 0:
+            self.result["test_loss"].append(loss)
+            self.result["test_accuracy"].append(metrics['accuracy'])
+
+        if server_round == self.num_rounds:
+            df = pd.DataFrame(self.result)
+            df.to_csv(f"result/{self.aglo_name}_{self.iids}.csv", index=False)
+            
         return float(loss), metrics
