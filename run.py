@@ -183,6 +183,7 @@ def run_simulation(
                 algo_name           = algo, 
                 net                 = net,
                 testloader          = testloader, 
+                device              = device,
                 num_rounds          = exp_config['num_round'], 
                 num_clients         = exp_config['num_clients'], 
                 iids                = exp_config['iids'], 
