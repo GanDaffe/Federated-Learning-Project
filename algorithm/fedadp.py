@@ -29,7 +29,6 @@ class FedAdp(FedAvg):
         local_updates = np.array(weights_results, dtype=object) - np.array(parameters_to_ndarrays(self.current_parameters), dtype=object)
 
         local_gradients = -local_updates/self.learning_rate
-        self.learning_rate *= self.decay_rate
 
         global_gradient = np.sum(np.array(num_examples).reshape(len(num_examples), 1) * local_gradients, axis=0) / sum(num_examples)
 
