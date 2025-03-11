@@ -49,6 +49,7 @@ class ModelMOON(nn.Module):
             self.features = nn.Sequential(*list(basemodel.children())[:-1])
             num_ftrs = basemodel.fc.in_features
         elif model_name == 'cnn': 
+            self.features = basemodel
             num_ftrs = 84
         
         self.l1 = nn.Linear(num_ftrs, num_ftrs)
