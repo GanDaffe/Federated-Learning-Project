@@ -21,70 +21,25 @@ if torch.cuda.is_available():
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def get_model(model_name, dataset_name, model_config):
+def get_model(model_name, model_config):
     """
     Only modify the num_conv_block if you want to use CustomCNN model
     """
-
-    if dataset_name == 'sentimen140':
-        if model_name == 'lstm':
-            return LSTM()
-        else:
-            raise ValueError(f"Invalid model name '{model_name}' for dataset '{dataset_name}'")
-
-    elif dataset_name == 'emnist':
-        if model_name == 'cnn':
-            return CNN(num_layer=model_config['num_layer'], 
-                       in_shape=model_config['in_shape'],
-                       im_size=model_config['im_size'],
-                       hidden=model_config['hidden'], 
-                       out_shape=model_config['out_shape'])
-        else:
-            raise ValueError(f"Invalid model name '{model_name}' for dataset '{dataset_name}'")
-
-    elif dataset_name == 'fmnist':
-        if model_name == 'cnn':
-            return CNN(num_layer=model_config['num_layer'], 
-                       in_shape=model_config['in_shape'],
-                       im_size=model_config['im_size'],
-                       hidden=model_config['hidden'], 
-                       out_shape=model_config['out_shape'])
-        else:
-            raise ValueError(f"Invalid model name '{model_name}' for dataset '{dataset_name}'")
-
-    elif dataset_name == 'cifar10':
-        if model_name == 'cnn':
-            return CNN(num_layer=model_config['num_layer'], 
-                       im_size=model_config['in_shape'],
-                       hidden=model_config['hidden'], 
-                       out_shape=model_config['out_shape'])
-        elif model_name == 'resnet50':
-            return ResNet(ResidualBlock, [3, 4, 6, 3], num_classes=model_config['out_shape'])
-        elif model_name == 'resnet101':
-            return ResNet(ResidualBlock, [3, 4, 23, 3], num_classes=model_config['out_shape'])
-        elif model_name == 'vgg16':
-            return VGG16(in_channels=model_config['in_shape'], num_classes=model_config['out_shape'])
-        else:
-            raise ValueError(f"Invalid model name '{model_name}' for dataset '{dataset_name}'")
-
-    elif dataset_name == 'cifar100':
-        if model_name == 'cnn':
-            return CNN(num_layer=model_config['num_layer'], 
-                       im_size=model_config['in_shape'],
-                       hidden=model_config['hidden'], 
-                       out_shape=model_config['out_shape'])
-        elif model_name == 'resnet50':
-            return ResNet(ResidualBlock, [3, 4, 6, 3], num_classes=model_config['out_shape'])
-        elif model_name == 'resnet101':
-            return ResNet(ResidualBlock, [3, 4, 23, 3], num_classes=model_config['out_shape'])
-        elif model_name == 'vgg16':
-            return VGG16(in_channels=model_config['in_shape'], num_classes=model_config['out_shape'])
-        else:
-            raise ValueError(f"Invalid model name '{model_name}' for dataset '{dataset_name}'")
-
-    else:
-        raise ValueError(f"Invalid dataset name '{dataset_name}'")
-
+    if model_name == 'cnn': 
+        model = CNN(in_feat=model_config['in_shape'],
+                    im_size=model_config['im_size'],
+                    hidden=model_config['hidden'], 
+                    out_feat=model_config['out_shape'])
+    elif model_name == 'resnet50': 
+        model = ResNet(ResidualBlock, [3, 4, 6, 3], num_classes=model_config['out_shape'])
+    elif model_name == 'resnet101': 
+        model = ResNet(ResidualBlock, [3, 4, 23, 3], num_classes=model_config['out_shape'])
+    elif model_name == 'vgg16':
+        model = VGG16(in_channels=model_config['in_shape'], num_classes=model_config['out_shape'])
+    elif model_name == 'lstm': 
+        model = LSTM() 
+    
+    return model
 
 def train(net, 
           trainloader, 
@@ -178,3 +133,22 @@ def compute_entropy(counts: Dict):
     for value in counts:
         entropy += -value/sum(counts) * math.log(value/sum(counts), len(counts)) if value != 0 else 0
     return entropy
+
+def load_config(): 
+    """
+    For fednova and moon
+    """
+    client_config =  {
+        "var_local_epochs":         True,  # Whether to use variable local epochs
+        "var_min_epochs":           1,  # Minimum number of local epochs
+        "var_max_epochs":           5,  # Maximum number of local epochs
+        "seed":                     42,  # Random seed for reproducibility
+        "optimizer": {
+            "gmf":      0, 
+            "lr":       0.01,  # Learning rate
+            "momentum": 0.9,  # Momentum for SGD
+            "mu":       0.005,  # Proximal term (adjusted in FedNovaClient if needed)
+        }
+    }
+
+    return client_config

@@ -1,6 +1,7 @@
 from algorithm.base.client import BaseClient 
 from import_lib import * 
 from algorithm.fednova.fednova_utils import * 
+from utils.train_helper import load_config
 
 class FedNovaClient(BaseClient):
     def __init__(self, *args, ratio, **kwargs):

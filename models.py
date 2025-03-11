@@ -1,42 +1,42 @@
 import torch
 from torch import nn 
 import torchvision.models as models
+import torch.nn.functional as F
 
 def calculate(size, kernel, stride, padding):
     return int(((size+(2*padding)-kernel)/stride) + 1)
 
 
 class CNN(nn.Module):
-    def __init__(self, num_layer, im_size, in_shape, hidden, out_shape):
+
+    def __init__(self, in_feat, im_size, out_feat, hidden): 
+        
         super(CNN, self).__init__()
-        out = im_size
-        self.conv_layers = nn.ModuleList()
-        factor = 1
-        current_in_channels = in_shape
+        out = im_size 
 
-        for i in range(num_layer):
-            self.conv_layers.append(nn.Conv2d(current_in_channels, factor * hidden, kernel_size=3, stride=1, padding=1))
-            out = calculate(out, kernel=3, stride=1, padding=1)
-            self.conv_layers.append(nn.ReLU())
-            self.conv_layers.append(nn.MaxPool2d(kernel_size=2, stride=2, padding=0))
-            out = calculate(out, kernel=2, stride=2, padding=0)
-            
-            if out < 1:
-                raise ValueError(f"Output size became {out} at layer {i+1}. Reduce num_layer or increase im_size.")
-                
-            current_in_channels = factor * hidden
-            if (i + 1) % 2 == 0:
-                factor *= 2
+        self.conv1 = nn.Conv2d(in_feat, 32, kernel_size=3, stride=1, padding=1)
+        out = calculate(out, 3, 1, 1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0) 
+        out = calculate(out, kernel=2, stride=2, padding=0)
 
-        self.flatten = nn.Flatten()
-        self.fc = nn.Linear(in_features=out * out * current_in_channels, out_features=out_shape)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        out = calculate(out, 3, 1, 1)
+        out = calculate(out, kernel=2, stride=2, padding=0)
+        
+        self.after_conv = out * out * 64
+        self.fc1 = nn.Linear(in_features=self.after_conv, out_features=hidden) 
+        self.fc2 = nn.Linear(in_features=hidden, out_features=out_feat) 
+    
+    def forward(self, X): 
+        X = self.pool(F.ReLU(self.conv1(X)))
+        X = self.pool(F.ReLU(self.conv2(X)))
 
-    def forward(self, x):
-        for layer in self.conv_layers:
-            x = layer(x)
-        x = self.flatten(x)
-        x = self.fc(x)
-        return x
+        X = X.view(-1, self.after_conv)
+
+        X = self.relu(self.fc1(X))
+        X = self.relu(self.fc2(X))
+
+        return X
 
 class LSTM(nn.Module):
 

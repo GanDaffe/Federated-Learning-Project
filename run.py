@@ -3,6 +3,7 @@ from flwr.common import ndarrays_to_parameters
 from utils.train_helper import get_model, get_parameters
 from algorithm.scaffold.scaffold_utils import load_c_local
 from import_algo import *
+from algorithm.moon.moon_model import init_model
 
 def run_simulation(
         algo, 
@@ -18,24 +19,20 @@ def run_simulation(
     
     device = exp_config['device'] 
     model_name = model_config['model_name']
-    dataset = exp_config['dataset_name']
-    net = get_model(model_name, dataset, model_config).to(device)
+    net = init_model(model_name, model_config).to(device) if algo == 'moon' else get_model(model_name, model_config).to(device)
 
     def base_client_fn(cid: str): 
         idx = int(cid)
         return BaseClient(cid, net, trainloaders[idx], criterion).to_client()
     def fednova_client_fn(cid: str):
         idx = int(cid)
-        return FedNovaClient(idx, net, trainloaders[idx], criterion, ratio=client_dataset_ratio).to_client()
-    
+        return FedNovaClient(idx, net, trainloaders[idx], criterion, ratio=client_dataset_ratio).to_client()   
     def cluster_fed_client_fn(cid: str) -> ClusterFedClient:
         idx = int(cid)
-        return ClusterFedClient(cid, net, trainloaders[idx], criterion, cluster_id=client_cluster_index[idx]).to_client()
-    
+        return ClusterFedClient(cid, net, trainloaders[idx], criterion, cluster_id=client_cluster_index[idx]).to_client()   
     def fedprox_client_fn(cid: str): 
         idx = int(cid)
         return BaseClient(cid, net, trainloaders[idx], criterion).to_client()
-    
     def scaffold_client_fn(cid: str): 
         idx = int(cid)
         c_local = load_c_local(idx)
