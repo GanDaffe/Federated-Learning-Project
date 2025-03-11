@@ -29,7 +29,7 @@ if __name__ == '__main__':
         'cifar10': 10, 
         'cifar100': 100, 
         'eminst': 37, 
-        'sentiment140': 2, 
+        'sentimen140': 2, 
     }
 
     # ---------- HYPER PARAMETERS -------------
@@ -90,7 +90,6 @@ if __name__ == '__main__':
 
     for i in range(experiment_config['num_clients']):
         trainloaders.append(DataLoader(trainset, batch_size=experiment_config['batch_size'], sampler=SubsetRandomSampler(ids[i])))
-       
 
     client_dataset_ratio: float = int((len(trainset) / experiment_config['num_clients'])) / len(trainset)
 
