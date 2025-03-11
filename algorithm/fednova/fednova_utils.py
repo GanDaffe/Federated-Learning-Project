@@ -276,3 +276,19 @@ def test_fednova(model, test_loader, device, *args) -> Tuple[float, Dict[str, fl
 
     total_loss /= len(test_loader)
     return total_loss, {"accuracy": sum(accuracy) / len(accuracy)}
+
+def load_config(): 
+    client_config =  {
+        "var_local_epochs":         True,  # Whether to use variable local epochs
+        "var_min_epochs":           1,  # Minimum number of local epochs
+        "var_max_epochs":           5,  # Maximum number of local epochs
+        "seed":                     42,  # Random seed for reproducibility
+        "optimizer": {
+            "gmf":      0, 
+            "lr":       0.01,  # Learning rate
+            "momentum": 0.9,  # Momentum for SGD
+            "mu":       0.005,  # Proximal term (adjusted in FedNovaClient if needed)
+        }
+    }
+
+    return client_config

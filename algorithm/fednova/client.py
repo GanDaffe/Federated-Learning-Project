@@ -6,10 +6,11 @@ class FedNovaClient(BaseClient):
     def __init__(self, *args, ratio, **kwargs):
         super().__init__(*args, **kwargs)
         self.ratio = ratio
+        self.client_config = load_config()
         self.optimizer = ProxSGD(params=self.net.parameters(),
-                                 lr=self.exp_config['optimizer']['lr'],
-                                 momentum=self.exp_config['optimizer']['momentum'],
-                                 mu=self.exp_config['optimizer']['mu'],
+                                 lr=self.client_config['optimizer']['lr'],
+                                 momentum=self.client_config['optimizer']['momentum'],
+                                 mu=self.client_config['optimizer']['mu'],
 
                                  ratio=self.ratio)
 
@@ -27,9 +28,9 @@ class FedNovaClient(BaseClient):
 
         self.optimizer = ProxSGD(
             params=self.net.parameters(),
-            lr=self.exp_config['optimizer']['lr'],
-            momentum=self.exp_config['optimizer']['momentum'],
-            mu=self.exp_config['optimizer']['mu'],
+            lr=self.client_config['optimizer']['lr'],
+            momentum=self.client_config['optimizer']['momentum'],
+            mu=self.client_config['optimizer']['mu'],
             ratio=self.ratio
         )
   
@@ -39,9 +40,11 @@ class FedNovaClient(BaseClient):
 
     def fit(self, parameters, config):
 
+        if self.client_config['optimizer']['lr'] != config['learning_rate']: 
+            self.client_config['optimizer']['lr'] = config['learning_rate'] 
+
         self.set_parameters(parameters)
-        learning_rate = self.exp_config['optimizer']['lr']
-        num_epochs = self.exp_config['var_min_epochs']
+        num_epochs = self.client_config['var_min_epochs']
 
         train_loss, train_acc = train_fednova(
             self.net,
@@ -49,7 +52,7 @@ class FedNovaClient(BaseClient):
             self.trainloader,
             self.device,
             num_epochs,
-            proximal_mu=self.exp_config['optimizer']['mu'],
+            proximal_mu=self.client_config['optimizer']['mu'],
         )
 
         grad_scaling_factor = self.optimizer.get_gradient_scaling()

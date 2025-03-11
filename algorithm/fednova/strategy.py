@@ -4,11 +4,10 @@ from algorithm.base.strategy import FedAvg
 from algorithm.fednova.fednova_utils import test_fednova
 
 class FedNovaStrategy(FedAvg):
-    def __init__(self, exp_config, *args, **kwargs):
+    def __init__(self, gmf = 0, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.exp_config = exp_config
         self.lr = self.learning_rate
-        self.gmf = exp_config['optimizer'].get("gmf", 0)  # Default gmf=0 nếu không có
+        self.gmf = gmf
         self.global_momentum_buffer = []
         if self.current_parameters is not None:
             self.global_parameters = parameters_to_ndarrays(

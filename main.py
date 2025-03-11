@@ -5,13 +5,11 @@ from utils.preprocessing import load_data, partition_data, clustering
 from utils.train_helper import compute_entropy
 from run import run_simulation
 from torch import nn
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Training on {DEVICE} using PyTorch {torch.__version__} and Flower {fl.__version__}")
 
 if __name__ == '__main__':
-    
-
-    # ---------- HYPER PARAMETERS -------------
+     
     size_img = {
         'fmnist': 28, 
         'cifar10': 32, 
@@ -19,6 +17,24 @@ if __name__ == '__main__':
         'emnist': 28
     }
     
+    input_size = {
+        'fmnist': 1,
+        'emnist': 1, 
+        'cifar10': 3, 
+        'cifar100': 3
+    }
+    
+    output_size = {
+        'fmnist': 10, 
+        'cifar10': 10, 
+        'cifar100': 100, 
+        'eminst': 37, 
+        'sentiment140': 2, 
+    }
+
+    # ---------- HYPER PARAMETERS -------------
+   
+
     experiment_config = {
         'algo':                     'scaffold',  #All letters in lowercase, no space
         'num_round':                3, 
@@ -36,34 +52,11 @@ if __name__ == '__main__':
     model_config = {
         'model_name':               'cnn', 
         'num_layer':                2,  # For CNN only
-        'out_shape':                10, # 2 for sentimen140, 100 for cifar100 otherwise 10
-        'in_shape':                 1,
+        'out_shape':                output_size[experiment_config['dataset_name']], # 2 for sentimen140, 100 for cifar100 otherwise 10
+        'in_shape':                 input_size[experiment_config['dataset_name']],
         'hidden':                   32,
         'im_size':                  size_img[experiment_config['dataset_name']]
     }
-    
-    client_config =  {
-        'device':                   DEVICE, 
-        "var_local_epochs":         True,  # Whether to use variable local epochs
-        "var_min_epochs":           1,  # Minimum number of local epochs
-        "var_max_epochs":           5,  # Maximum number of local epochs
-        "seed":                     42,  # Random seed for reproducibility
-        "optimizer": {
-            "lr":       0.01,  # Learning rate
-            "momentum": 0.9,  # Momentum for SGD
-            "mu":       0.005,  # Proximal term (adjusted in FedNovaClient if needed)
-        }
-    }
-    
-
-    strategy_config = {
-        'gmf':                      0, 
-        'optimizer': {
-            'gmf':      0              
-        },
-        'device':                   DEVICE
-    }
-
 
     # ----------- LOADING THE DATA -------------
 
@@ -111,8 +104,6 @@ if __name__ == '__main__':
         nn.CrossEntropyLoss(), 
         experiment_config, 
         entropies, 
-        client_config, 
         model_config,
-        strategy_config,
         client_dataset_ratio
     )

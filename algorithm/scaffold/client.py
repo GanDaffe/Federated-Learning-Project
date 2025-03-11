@@ -7,20 +7,20 @@ from logging import INFO, log
 class SCAFFOLD_CLIENT(BaseClient):
     def __init__(self, *args, c_local, **kwargs):
         super().__init__(*args, **kwargs)
-        self.device = self.exp_config['device']
-        self.criterion = torch.nn.CrossEntropyLoss().to(self.device)
-        self.optimizer = torch.optim.SGD(self.net.parameters(), lr=0.01, momentum=0.9)
         self.c_local = c_local
 
     def fit(self, parameters, config):
         """Train the model with data of this client."""
         set_parameters(self.net, parameters)
+        lr = config['learning_rate']
+        self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr, momentum=0.9)
+
         results = self.train_scaffold(
             net=self.net,
             trainloader=self.trainloader,
             epochs=1,
-            learning_rate=0.01,
-            device=self.device,
+            learning_rate=lr,
+            device=config['device'],
             config=config,
             c_local=self.c_local,
             parameters=parameters

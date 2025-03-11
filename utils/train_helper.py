@@ -134,7 +134,7 @@ def train(net,
 def test(net, testloader, device):
     net.eval()
     criterion = nn.CrossEntropyLoss()
-    corrects, total_loss = 0, 0.0
+    corrects, total_loss, tot = 0, 0.0, 0
 
     with torch.no_grad():
         for images, labels in testloader:
@@ -145,13 +145,15 @@ def test(net, testloader, device):
             predicted = torch.argmax(outputs, dim=1)
             corrects += torch.sum(predicted == labels).item()
             total_loss += loss.item() * images.shape[0]
+            tot += images.shape[0] 
 
             del images, labels, outputs, predicted
             torch.cuda.empty_cache()
 
-    total_loss /= len(testloader.dataset)
-    accuracy = corrects / len(testloader.dataset)
-
+    total_loss /= tot
+    accuracy = corrects / tot
+    
+    del tot
     torch.cuda.empty_cache()
     gc.collect()
 

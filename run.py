@@ -12,36 +12,34 @@ def run_simulation(
         criterion,
         exp_config,
         entropies, 
-        client_config: dict, 
         model_config: dict,
-        strategy_config: dict,
         client_dataset_ratio
     ):
     
     device = exp_config['device'] 
     model_name = model_config['model_name']
     dataset = exp_config['dataset_name']
-    net = get_model(model_name, dataset, model_config)
+    net = get_model(model_name, dataset, model_config).to(device)
 
     def base_client_fn(cid: str): 
         idx = int(cid)
-        return BaseClient(cid, net, trainloaders[idx], criterion, client_config).to_client()
+        return BaseClient(cid, net, trainloaders[idx], criterion).to_client()
     def fednova_client_fn(cid: str):
         idx = int(cid)
-        return FedNovaClient(idx, net, trainloaders[idx], criterion, client_config, ratio=client_dataset_ratio).to_client()
+        return FedNovaClient(idx, net, trainloaders[idx], criterion, ratio=client_dataset_ratio).to_client()
     
     def cluster_fed_client_fn(cid: str) -> ClusterFedClient:
         idx = int(cid)
-        return ClusterFedClient(cid, net, trainloaders[idx], criterion, client_config, cluster_id=client_cluster_index[idx]).to_client()
+        return ClusterFedClient(cid, net, trainloaders[idx], criterion, cluster_id=client_cluster_index[idx]).to_client()
     
     def fedprox_client_fn(cid: str): 
         idx = int(cid)
-        return BaseClient(cid, net, trainloaders[idx], criterion, client_config).to_client()
+        return BaseClient(cid, net, trainloaders[idx], criterion).to_client()
     
     def scaffold_client_fn(cid: str): 
         idx = int(cid)
         c_local = load_c_local(idx)
-        return SCAFFOLD_CLIENT(cid, net, trainloaders[idx], criterion, client_config, c_local=c_local).to_client()
+        return SCAFFOLD_CLIENT(cid, net, trainloaders[idx], criterion, c_local=c_local).to_client()
     
     current_parameters = ndarrays_to_parameters(get_parameters(net))
     client_resources = {"num_cpus": 2, "num_gpus": 1} if device == "cuda" else {"num_cpus": 1, "num_gpus": 0.0}    
@@ -53,9 +51,8 @@ def run_simulation(
             config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
             strategy = FedNovaStrategy( algo_name = algo,
                                         net = net,
-                                        exp_config=strategy_config,
                                         testloader=testloader,
-                                        device=exp_config['device'],
+                                        device=device,
                                         num_rounds=exp_config['num_round'],
                                         num_clients=exp_config['num_clients'],
                                         iids = exp_config['iids'],
@@ -74,7 +71,7 @@ def run_simulation(
                                 num_rounds=exp_config['num_round'],
                                 net = net,
                                 testloader=testloader,
-                                device=exp_config['device'],
+                                device=device,
                                 num_clients=exp_config['num_clients'],
                                 iids = exp_config['iids'],
                                 current_parameters=current_parameters,
@@ -93,7 +90,7 @@ def run_simulation(
                                num_rounds=exp_config['num_round'],
                                net = net,
                                testloader=testloader,
-                               device=exp_config['device'],
+                               device=device,
                                num_clients=exp_config['num_clients'],
                                iids = exp_config['iids'],
                                current_parameters=current_parameters,
@@ -111,7 +108,7 @@ def run_simulation(
                               num_rounds=exp_config['num_round'],
                               net = net,
                               testloader=testloader,
-                              device=exp_config['device'],
+                              device=device,
                               num_clients=exp_config['num_clients'],
                               iids = exp_config['iids'],
                               current_parameters=current_parameters,
@@ -129,13 +126,11 @@ def run_simulation(
             strategy = FedAdp(algo_name = algo,
                               net = net,
                               testloader=testloader,
-                              device=exp_config['device'],
+                              device=device,
                               num_rounds=exp_config['num_round'],
                               num_clients=exp_config['num_clients'],
                               iids = exp_config['iids'],
                               current_parameters=current_parameters,
-                              # entropies=entropies
-                              # learning_rate = 0.1
                             ),
 
             client_resources = client_resources
@@ -148,7 +143,7 @@ def run_simulation(
             strategy = FedAvg(algo_name = algo,
                               net = net,
                               testloader=testloader,
-                              device=exp_config['device'],
+                              device=device,
                               num_rounds=exp_config['num_round'],
                               num_clients=exp_config['num_clients'],
                               iids = exp_config['iids'],
@@ -164,7 +159,7 @@ def run_simulation(
             strategy = SCAFFOLD(algo_name = algo,
                                 net = net,
                                 testloader=testloader,
-                                device=exp_config['device'],
+                                device=device,
                                 num_rounds=exp_config['num_round'],
                                 num_clients=exp_config['num_clients'],
                                 iids = exp_config['iids'],
