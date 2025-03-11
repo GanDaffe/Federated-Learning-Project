@@ -9,7 +9,6 @@ class BaseClient(fl.client.NumPyClient):
         self.cid = cid
         self.net = net
         self.trainloader = trainloader
-        self.client_config = client_config
         self.criterion = criterion
 
     def get_parameters(self, config):
