@@ -50,7 +50,7 @@ class FedNovaClient(BaseClient):
             self.net,
             self.optimizer,
             self.trainloader,
-            self.device,
+            config['device'],
             num_epochs,
             proximal_mu=self.client_config['optimizer']['mu'],
         )
