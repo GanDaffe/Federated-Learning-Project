@@ -28,13 +28,13 @@ class CNN(nn.Module):
         self.fc2 = nn.Linear(in_features=hidden, out_features=out_feat) 
     
     def forward(self, X): 
-        X = self.pool(F.ReLU(self.conv1(X)))
-        X = self.pool(F.ReLU(self.conv2(X)))
+        X = self.pool(F.relu(self.conv1(X)))
+        X = self.pool(F.relu(self.conv2(X)))
 
         X = X.view(-1, self.after_conv)
 
-        X = self.relu(self.fc1(X))
-        X = self.relu(self.fc2(X))
+        X = F.relu(self.fc1(X))
+        X = F.relu(self.fc2(X))
 
         return X
 
