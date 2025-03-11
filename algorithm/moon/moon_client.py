@@ -13,7 +13,7 @@ class MoonClient(BaseClient):
         else:
             self.dir = f'{dir}_{self.cid}'
         
-        self.client_config = load_config()
+        self.exp_config = load_config()
         self.initial_parameters = self.net
 
     def fit(
