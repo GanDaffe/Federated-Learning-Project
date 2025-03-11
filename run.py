@@ -107,7 +107,7 @@ def run_simulation(
             client_fn           = base_client_fn,
             num_clients         = exp_config['num_clients'],
             config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy            = FedImp(algo_name = algo,
+            strategy            = FedImp(
                 algo_name           = algo,
                 net                 = net,
                 testloader          = testloader,
@@ -188,6 +188,6 @@ def run_simulation(
                 iids                = exp_config['iids'], 
                 current_parameters  = current_parameters
 
-                )
+                ),
             client_resources = client_resources
         )
