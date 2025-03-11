@@ -21,3 +21,6 @@ from algorithm.fedprox.strategy import FedProx
 
 from algorithm.fednova.client import FedNovaClient
 from algorithm.fednova.strategy import FedNovaStrategy
+
+from algorithm.moon.moon_client import MoonClient 
+from algorithm.moon.moon_strategy import MOON

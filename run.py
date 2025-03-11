@@ -37,132 +37,157 @@ def run_simulation(
         idx = int(cid)
         c_local = load_c_local(idx)
         return SCAFFOLD_CLIENT(cid, net, trainloaders[idx], criterion, c_local=c_local).to_client()
+    def moon_client_fn(cid: str): 
+        idx = int(cid)
+        return MoonClient(cid, net, trainloaders[idx], criterion, dir='/moon_models').to_client()
     
+
     current_parameters = ndarrays_to_parameters(get_parameters(net))
-    client_resources = {"num_cpus": 2, "num_gpus": 1} if device == "cuda" else {"num_cpus": 1, "num_gpus": 0.0}    
+    client_resources = {"num_cpus": 1, "num_gpus": 0.2} if device == "cuda" else {"num_cpus": 1, "num_gpus": 0.0}    
 
     if algo == 'fednova': 
         fl.simulation.start_simulation(
-            client_fn = fednova_client_fn,
-            num_clients = exp_config['num_clients'],
-            config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy = FedNovaStrategy( algo_name = algo,
-                                        net = net,
-                                        testloader=testloader,
-                                        device=device,
-                                        num_rounds=exp_config['num_round'],
-                                        num_clients=exp_config['num_clients'],
-                                        iids = exp_config['iids'],
-                                        current_parameters=current_parameters,
-                                ),
+            client_fn           = fednova_client_fn,
+            num_clients         = exp_config['num_clients'],
+            config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
+            strategy            = FedNovaStrategy( 
+                algo_name           = algo,
+                net                 = net,
+                testloader          = testloader,
+                device              = device,
+                num_rounds          = exp_config['num_round'],
+                num_clients         = exp_config['num_clients'],
+                iids                = exp_config['iids'],
+                current_parameters  = current_parameters,
+            ),
 
-            client_resources = client_resources
+            client_resources        = client_resources
         )
     elif algo == 'fedadpimp': 
         assert entropies != None, f'Entropies for {algo} cannnot be none'
         fl.simulation.start_simulation(
-            client_fn = cluster_fed_client_fn,
-            num_clients = exp_config['num_clients'],
-            config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy = BoxFedv2(algo_name = algo,
-                                num_rounds=exp_config['num_round'],
-                                net = net,
-                                testloader=testloader,
-                                device=device,
-                                num_clients=exp_config['num_clients'],
-                                iids = exp_config['iids'],
-                                current_parameters=current_parameters,
-                                entropies = entropies,
+            client_fn           = cluster_fed_client_fn,
+            num_clients         = exp_config['num_clients'],
+            config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
+            strategy            = BoxFedv2(
+                algo_name           = algo,
+                net                 = net,
+                testloader          = testloader,
+                device              = device,
+                num_rounds          = exp_config['num_round'],
+                num_clients         = exp_config['num_clients'],
+                iids                = exp_config['iids'],
+                current_parameters  = current_parameters,
+                entropies           = entropies,
                                 # learning_rate = 0.1
-                            ),
+                ),
 
-            client_resources = client_resources
+            client_resources    = client_resources
         )   
     elif algo == 'fedprox': 
         fl.simulation.start_simulation(
-            client_fn = fedprox_client_fn,
-            num_clients = exp_config['num_clients'],
-            config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy = FedProx(algo_name = algo,
-                               num_rounds=exp_config['num_round'],
-                               net = net,
-                               testloader=testloader,
-                               device=device,
-                               num_clients=exp_config['num_clients'],
-                               iids = exp_config['iids'],
-                               current_parameters=current_parameters,
-                               # learning_rate = 0.1
+            client_fn           = fedprox_client_fn,
+            num_clients         = exp_config['num_clients'],
+            config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
+            strategy            = FedProx(
+                algo_name           = algo,
+                net                 = net,
+                testloader          = testloader,
+                device              = device,
+                num_rounds          = exp_config['num_round'],
+                num_clients         = exp_config['num_clients'],
+                iids                = exp_config['iids'],
+                current_parameters  = current_parameters,
                             ),
-            client_resources = client_resources
+            client_resources    = client_resources
         )
     elif algo == 'fedimp': 
         assert entropies != None, f'Entropies for {algo} cannnot be none'
         fl.simulation.start_simulation(
-            client_fn = base_client_fn,
-            num_clients = exp_config['num_clients'],
-            config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy = FedImp(algo_name = algo,
-                              num_rounds=exp_config['num_round'],
-                              net = net,
-                              testloader=testloader,
-                              device=device,
-                              num_clients=exp_config['num_clients'],
-                              iids = exp_config['iids'],
-                              current_parameters=current_parameters,
-                              entropies = entropies,
-                              # learning_rate = 0.1
-                            ),
+            client_fn           = base_client_fn,
+            num_clients         = exp_config['num_clients'],
+            config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
+            strategy            = FedImp(algo_name = algo,
+                algo_name           = algo,
+                net                 = net,
+                testloader          = testloader,
+                device              = device,
+                num_rounds          = exp_config['num_round'],
+                num_clients         = exp_config['num_clients'],
+                iids                = exp_config['iids'],
+                current_parameters  = current_parameters,
+                entropies           = entropies,
+                ),
 
-            client_resources = client_resources
+            client_resources    = client_resources
         )   
     elif algo == 'fedadp':
         fl.simulation.start_simulation(
-            client_fn = base_client_fn,
-            num_clients = exp_config['num_clients'],
-            config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy = FedAdp(algo_name = algo,
-                              net = net,
-                              testloader=testloader,
-                              device=device,
-                              num_rounds=exp_config['num_round'],
-                              num_clients=exp_config['num_clients'],
-                              iids = exp_config['iids'],
-                              current_parameters=current_parameters,
+            client_fn           = base_client_fn,
+            num_clients         = exp_config['num_clients'],
+            config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
+            strategy            = FedAdp(
+                algo_name           = algo,
+                net                 = net,
+                testloader          = testloader,
+                device              = device,
+                num_rounds          = exp_config['num_round'],
+                num_clients         = exp_config['num_clients'],
+                iids                = exp_config['iids'],
+                current_parameters  = current_parameters,
                             ),
 
-            client_resources = client_resources
+            client_resources    = client_resources
         )   
     elif algo == 'fedavg': 
         fl.simulation.start_simulation(
-            client_fn = base_client_fn, 
-            num_clients = exp_config['num_clients'],
-            config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy = FedAvg(algo_name = algo,
-                              net = net,
-                              testloader=testloader,
-                              device=device,
-                              num_rounds=exp_config['num_round'],
-                              num_clients=exp_config['num_clients'],
-                              iids = exp_config['iids'],
-                              current_parameters=current_parameters,
-                             ),
-            client_resources=client_resources
+            client_fn           = base_client_fn, 
+            num_clients         = exp_config['num_clients'],
+            config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
+            strategy            = FedAvg(
+                algo_name           = algo,
+                net                 = net,
+                testloader          = testloader,
+                device              = device,
+                num_rounds          = exp_config['num_round'],
+                num_clients         = exp_config['num_clients'],
+                iids                = exp_config['iids'],
+                current_parameters  = current_parameters,
+                ),
+            client_resources     = client_resources
         )
     elif algo == 'scaffold': 
         fl.simulation.start_simulation(
-            client_fn = scaffold_client_fn,
-            num_clients = exp_config['num_clients'],
-            config = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
-            strategy = SCAFFOLD(algo_name = algo,
-                                net = net,
-                                testloader=testloader,
-                                device=device,
-                                num_rounds=exp_config['num_round'],
-                                num_clients=exp_config['num_clients'],
-                                iids = exp_config['iids'],
-                                current_parameters=current_parameters,
-                            ),
+            client_fn           = scaffold_client_fn,
+            num_clients         = exp_config['num_clients'],
+            config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
+            strategy            = SCAFFOLD(
+                algo_name           = algo,
+                net                 = net,
+                testloader          = testloader,
+                device              = device,
+                num_rounds          = exp_config['num_round'],
+                num_clients         = exp_config['num_clients'],
+                iids                = exp_config['iids'],
+                current_parameters  = current_parameters,
+            ),
 
-             client_resources = client_resources
+            client_resources    = client_resources
         )
-    
+    elif algo == 'moon': 
+        fl.simulation.start_simulation(
+            client_fn           = moon_client_fn, 
+            num_clients         = exp_config['num_clients'], 
+            config              = fl.server.ServerConfig(num_rounds = exp_config['num_round']), 
+            strategy            = MOON(
+                algo_name           = algo, 
+                net                 = net,
+                testloader          = testloader, 
+                num_rounds          = exp_config['num_rounds'], 
+                num_clients         = exp_config['num_clients'], 
+                iids                = exp_config['iids'], 
+                current_parameters  = current_parameters
+
+                )
+            client_resources = client_resources
+        )

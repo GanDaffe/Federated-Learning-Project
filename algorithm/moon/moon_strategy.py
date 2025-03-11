@@ -4,7 +4,7 @@ from algorithm.moon.moon_utils import test_moon
 
 class MOON(FedAvg):
 
-    def __init__(self, *args, temperature, **kwargs):
+    def __init__(self, *args, temperature: float = 1.5, **kwargs):
         super().__init__(*args, **kwargs)
         self.temperature = temperature
 
