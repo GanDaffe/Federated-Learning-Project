@@ -95,6 +95,7 @@ if __name__ == '__main__':
 
     # ------------ RUN SIMULATION ---------------
 
+    print(f'Testing on {experiment_config['algo']} and model: {model_config['model_name']}')
     run_simulation(
         experiment_config['algo'], 
         trainloaders,
