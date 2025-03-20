@@ -103,7 +103,6 @@ def test(net, testloader, device):
             tot += images.shape[0] 
 
             del images, labels, outputs, predicted
-            torch.cuda.empty_cache()
 
     total_loss /= tot
     accuracy = corrects / tot
