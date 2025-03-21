@@ -139,7 +139,7 @@ def load_data(dataset: str):
         df['label'] = df['label'].replace({4: 1} )
         df['preprocessing_text'] = df['text'].apply(clean_text)
 
-        print(df.head())
+
         max_words = 2000
         max_len = 500
 
@@ -156,7 +156,7 @@ def load_data(dataset: str):
 
     return trainset, testset
 
-def clustering(classes, data_size, num_clients, dist, min_smp=3, xi=0.01, distance='manhattan'):
+def clustering(classes, data_size, num_clients, dist, min_smp=3, xi=0.2, distance='manhattan'):
     distrib_ = []
     for d in dist:
       distrib_.append(np.array([d[s] / (data_size / num_clients) if d[s] is not None else 0 for s in classes]))
@@ -165,17 +165,17 @@ def clustering(classes, data_size, num_clients, dist, min_smp=3, xi=0.01, distan
         optics = OPTICS(min_samples=min_smp,
                         xi=xi,
                         metric=hellinger,
-                        min_cluster_size=2)
+                        min_cluster_size=5)
     elif distance == 'jensenshannon':
         optics = OPTICS(min_samples=min_smp,
                         xi=xi,
                         metric=jensen_shannon_divergence_distance,
-                        min_cluster_size=2)
+                        min_cluster_size=5)
     else:
         optics = OPTICS(min_samples=min_smp,
                         xi=xi,
                         metric=distance,
-                        min_cluster_size=2)
+                        min_cluster_size=5)
 
     optics.fit(distrib_)
     labels = optics.labels_
@@ -183,7 +183,7 @@ def clustering(classes, data_size, num_clients, dist, min_smp=3, xi=0.01, distan
 
     client_cluster_index = dict()
     for i, lab in enumerate(labels):
-        client_cluster_index[i] = int(lab + 1)
+        client_cluster_index[i] = int(lab)
 
     return client_cluster_index, distrib_
 
@@ -261,5 +261,4 @@ def partition_data(dataset, _iid: int, non_iid_diff : int, num_clients: int, alp
         label_dist.append({classes_[j]: counter.get(j, 0) for j in range(num_classes)})
 
     return ids, label_dist
-
 

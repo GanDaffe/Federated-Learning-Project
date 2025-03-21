@@ -15,14 +15,14 @@ class BoxFedv2(FedAvg):
         self.entropies = entropies
         self.temperature = temperature 
         self.alpha = alpha 
-        self.current_angles = [None] * self.num_clients
+        self.current_angles = {}
 
     
     def __repr__(self): 
         return 'FedAdpImp'
     
     
-    def aggregate_cluster(self, cluster_clients: List[FitRes]):
+    def aggregate_cluster(self, cluster_id, cluster_clients: List[FitRes]):
         weight_results = [(parameters_to_ndarrays(fit_res.parameters),
                             fit_res.num_examples * np.exp(self.entropies[int(fit_res.metrics["id"])]/self.temperature))
                             for fit_res in cluster_clients]
@@ -37,6 +37,7 @@ class BoxFedv2(FedAvg):
         total_examples = sum(fit_res.num_examples for fit_res in cluster_clients)
 
         representative_metrics = dict(cluster_clients[0].metrics)
+        representative_metrics["id"] = cluster_id
         representative_metrics["loss"] = loss
         representative_metrics["accuracy"] = accuracy
 
@@ -68,19 +69,21 @@ class BoxFedv2(FedAvg):
 
         cluster_results = {}
 
-        for cluster_id, cluster_clients in cluster_data.items():
-            if not cluster_id == 0:
-                cluster_results[cluster_id] = self.aggregate_cluster(cluster_data[cluster_id])
+        for cluster_id, _ in cluster_data.items():
+            if len(cluster_data[cluster_id]) > 1:
+                cluster_results[cluster_id] = self.aggregate_cluster(cluster_id, cluster_data[cluster_id])
 
         weights_results = [parameters_to_ndarrays(fit_res.parameters) for _, fit_res in cluster_results.items()]
 
         num_examples = [fit_res.num_examples for _, fit_res in cluster_results.items()]
         ids = [int(fit_res.metrics["id"]) for _, fit_res in cluster_results.items()]
 
-        for fit_res in cluster_data[0]:
-            weights_results.append(parameters_to_ndarrays(fit_res.parameters))
-            num_examples.append(fit_res.num_examples)
-            ids.append(int(fit_res.metrics["id"]))
+        for _, v in cluster_data.items():
+            if len(v) == 1:
+                fit_res = v[0]
+                weights_results.append(parameters_to_ndarrays(fit_res.parameters))
+                num_examples.append(fit_res.num_examples)
+                ids.append(int(fit_res.metrics["cluster_id"]))
 
         local_updates = np.array(weights_results, dtype=object) - np.array(parameters_to_ndarrays(self.current_parameters), dtype=object)
 
@@ -117,13 +120,15 @@ class BoxFedv2(FedAvg):
 
         losses = [fit_res.num_examples * fit_res.metrics["loss"] for _, fit_res in cluster_results.items()]
         corrects = [round(fit_res.num_examples * fit_res.metrics["accuracy"]) for _, fit_res in cluster_results.items()]
+        
+        for _, v in cluster_data.items():
+            if len(v) == 1:
+                fit_res = v[0]
+                losses.append(fit_res.num_examples * fit_res.metrics["loss"])
+                corrects.append(round(fit_res.num_examples * fit_res.metrics["accuracy"]))
+                loss = sum(losses) / sum(num_examples)
+
         loss = sum(losses) / sum(num_examples)
-
-        for fit_res in cluster_data[0]:
-            losses.append(fit_res.num_examples * fit_res.metrics["loss"])
-            corrects.append(round(fit_res.num_examples * fit_res.metrics["accuracy"]))
-            loss = sum(losses) / sum(num_examples)
-
         accuracy = sum(corrects) / sum(num_examples)
         print(f"train_loss: {loss} - train_acc: {accuracy}")
 
